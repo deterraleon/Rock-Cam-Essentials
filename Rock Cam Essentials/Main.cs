@@ -873,7 +873,7 @@ namespace Rock_Cam_Essentials
                 return false;
             }
         }
-        public bool FullCameraSetup(string pov = "Null", float positional_smoothing = 0, float rotational_smoothing = 0, int fov = -1,
+        public bool FullCameraSetup(string pov = "Null", float positional_smoothing = -1, float rotational_smoothing = -1, int fov = -1,
             float TPCameraDistance = -1, float TPCameraAngle = -1)
         {
             try
@@ -895,27 +895,44 @@ namespace Rock_Cam_Essentials
                         TPCameraDistance = ThirdPersonDistance;
                     }
                     SetThirdPersonDistance(TPCameraDistance);
-                    if (TPCameraAngle == -1)
+                    if (TPCameraAngle != -1)
                     {
-                        TPCameraAngle = ThirdPersonAngle;
+                        SetThirdPersonAngle(TPCameraAngle);
                     }
-                    SetThirdPersonAngle(TPCameraAngle);
-                    SetThirdPersonPositionalSmooting(positional_smoothing);
-                    SetThirdPersonRotationalSmooting(rotational_smoothing);
+                    if(positional_smoothing != -1)
+                    {
+                        SetThirdPersonPositionalSmooting(positional_smoothing);
+                    }
+                    if (rotational_smoothing != -1)
+                    {
+                        SetThirdPersonRotationalSmooting(rotational_smoothing);
+                    }
                 }
                 else if(pov == "FP")
                 {
                     SetFirstPersonPOV();
                     SetFirstPersonFOV(fov);
-                    SetFirstPersonPositionalSmooting(positional_smoothing);
-                    SetFirstPersonRotationalSmooting(rotational_smoothing);
+                    if (positional_smoothing != -1)
+                    {
+                        SetFirstPersonPositionalSmooting(positional_smoothing);
+                    }
+                    if (rotational_smoothing != -1)
+                    {
+                        SetFirstPersonRotationalSmooting(rotational_smoothing);
+                    }
                 }
                 else if(pov == "HH")
                 {
                     SetHandheldPOV();
                     SetHandheldFOV(fov);
-                    SetHandheldPositionalSmooting(positional_smoothing);
-                    SetHandheldRotationalSmooting(rotational_smoothing);
+                    if (positional_smoothing != -1)
+                    {
+                        SetHandheldPositionalSmooting(positional_smoothing);
+                    }
+                    if (rotational_smoothing != -1)
+                    {
+                        SetHandheldRotationalSmooting(rotational_smoothing);
+                    }
                 }
                 else
                 {
