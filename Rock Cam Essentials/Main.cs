@@ -108,6 +108,7 @@ namespace Rock_Cam_Essentials
         public LckCamera TPCamera;
         public LckCamera FPCamera;
         public LckCamera HHCamera;
+        
         public int isShown = 1;
         public bool POVChanged = false;
         public struct POVNames
@@ -169,6 +170,7 @@ namespace Rock_Cam_Essentials
                 TPCamera = Tablet.thirdPersonCamera;
                 FPCamera = Tablet.firstPersonCamera;
                 HHCamera = Tablet.selfieCamera;
+                POVUpdate();
                 POVChanged = false;
                 return true;
             }
@@ -965,7 +967,7 @@ namespace Rock_Cam_Essentials
             try
             {
                 bool povchanged = false;
-                if (TPCamera.isActiveAndEnabled)
+                if (CameraController.CurrentCameraMode == Il2CppRUMBLE.Recording.LCK.Extensions.CameraMode.ThirdPerson)
                 {
                     if (POV != "TP")
                     {
@@ -973,7 +975,7 @@ namespace Rock_Cam_Essentials
                     }
                     POV = "TP";
                 }
-                else if (FPCamera.isActiveAndEnabled)
+                else if (CameraController.CurrentCameraMode == Il2CppRUMBLE.Recording.LCK.Extensions.CameraMode.FirstPerson)
                 {
                     if (POV != "FP")
                     {
@@ -981,7 +983,7 @@ namespace Rock_Cam_Essentials
                     }
                     POV = "FP";
                 }
-                else if (HHCamera.isActiveAndEnabled)
+                else if (CameraController.CurrentCameraMode == Il2CppRUMBLE.Recording.LCK.Extensions.CameraMode.Selfie)
                 {
                     if (POV != "HH")
                     {
