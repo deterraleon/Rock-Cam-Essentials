@@ -80,7 +80,7 @@ namespace Rock_Cam_Essentials
         public int Smoothing = 0;
         public bool isFlippedTP = false;
         public bool isFlippedHH = false;
-        public string POV = "HH";
+        public string POV = "Handheld";
         public bool isHorizontal = true;
         public int PhotoTimer = 0;
         public int PhotoTimerIncrement = 2;
@@ -110,8 +110,16 @@ namespace Rock_Cam_Essentials
         public LckCamera HHCamera;
         public int isShown = 1;
         public bool POVChanged = false;
+        public struct POVNames
+        {
+            public string ThirdPerson, FirstPerson, Handheld;
+        }
+        public POVNames POVs;
         public Rock_Cam()
         {
+            POVs.ThirdPerson = "TP";
+            POVs.FirstPerson = "FP";
+            POVs.Handheld = "HH";
             Fix();
         }
         public bool Fix()
