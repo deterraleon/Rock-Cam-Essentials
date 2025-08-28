@@ -16,7 +16,7 @@ namespace Rock_Cam_Essentials
     public static class BuildInfo
     {
         public const string ModName = "RockCamEssentials";
-        public const string ModVersion = "1.2.1";
+        public const string ModVersion = "1.3.0";
         public const string Author = "Deterraleon";
     }
 
