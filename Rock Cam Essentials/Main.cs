@@ -1,4 +1,5 @@
 ﻿using Il2CppLiv.Lck;
+using Il2CppLiv.Lck.Recorder;
 using Il2CppLiv.Lck.Tablet;
 using Il2CppRUMBLE.Managers;
 using Il2CppRUMBLE.Players.Subsystems;
@@ -16,7 +17,7 @@ namespace Rock_Cam_Essentials
     public static class BuildInfo
     {
         public const string ModName = "RockCamEssentials";
-        public const string ModVersion = "1.3.0";
+        public const string ModVersion = "1.4.0";
         public const string Author = "Deterraleon";
     }
 
@@ -86,6 +87,7 @@ namespace Rock_Cam_Essentials
         public int PhotoTimerMaxValue = 8;
         public bool isRecording = false;
         public int DetachedPreview = 0;
+        public bool DetachedPreviewChanged = false;
         public int MaxDespawnDistance = 2;
         public float SpawnYOffset = -0.1f;
         public float TabletSpawnDelay = 0.3f;
@@ -110,14 +112,19 @@ namespace Rock_Cam_Essentials
         public UnityEngine.Rendering.Universal.UniversalAdditionalCameraData TPCameraSettings;
         public UnityEngine.Rendering.Universal.UniversalAdditionalCameraData FPCameraSettings;
         public UnityEngine.Rendering.Universal.UniversalAdditionalCameraData HHCameraSettings;
-
+        public LckService LckService;
         public int isShown = 1;
         public bool POVChanged = false;
+        public LCKTabletDetachedPreview DetachedPreviewManager;
         public struct POVNames
         {
             public string ThirdPerson, FirstPerson, Handheld;
         }
         public POVNames POVs;
+        public struct RecordingSettings
+        {
+            public uint width, height, audioBitrate, Bitrate, framerate, microphoneGain;
+        }
         public Rock_Cam()
         {
             POVs.ThirdPerson = "TP";
@@ -177,9 +184,11 @@ namespace Rock_Cam_Essentials
                 TPCameraSettings = Tablet.thirdPersonCamera.gameObject.GetComponent<UnityEngine.Rendering.Universal.UniversalAdditionalCameraData>();
                 FPCameraSettings = Tablet.firstPersonCamera.gameObject.GetComponent<UnityEngine.Rendering.Universal.UniversalAdditionalCameraData>();
                 HHCameraSettings = Tablet.selfieCamera.gameObject.GetComponent<UnityEngine.Rendering.Universal.UniversalAdditionalCameraData>();
+                LckService = Camera.lckService;
+                DetachedPreviewManager = Tablet.lckDetachedPreview;
                 return true;
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 MelonLogger.Error(ex);
                 return false;
@@ -589,7 +598,7 @@ namespace Rock_Cam_Essentials
             try
             {
                 Tablet.lckDetachedPreview.SwitchPreview(index);
-                DetachedPreview = index;
+                UpdateDetachedPreview();
             }
             catch (Exception ex)
             {
@@ -620,7 +629,7 @@ namespace Rock_Cam_Essentials
         }
         public bool SetThirdPersonFOV(int fov)
         {
-            if(TPFOVSetter._currentValue != FOV)
+            if (TPFOVSetter._currentValue != FOV)
             {
                 MelonLogger.Msg("FOV value desynched");
                 FOV = TPFOVSetter._currentValue;
@@ -634,7 +643,7 @@ namespace Rock_Cam_Essentials
                 TPFOVSetter._maxValue = TPmaxFOV;
                 TPFOVSetter._increment = TPFOVStep;
                 FOV = fov;
-                if(FOV != TPFOVSetter._currentValue)
+                if (FOV != TPFOVSetter._currentValue)
                 {
                     MelonLogger.Msg(FOV.ToString() + " " + TPFOVSetter._currentValue.ToString());
                 }
@@ -837,8 +846,8 @@ namespace Rock_Cam_Essentials
         }
         public bool SetSpawnYOffset(float offset)
         {
-            try 
-            { 
+            try
+            {
                 Camera.spawnYOffset = offset;
                 SpawnYOffset = offset;
                 return true;
@@ -883,15 +892,15 @@ namespace Rock_Cam_Essentials
         {
             try
             {
-                if(pov == "Null")
+                if (pov == "Null")
                 {
                     pov = POV;
                 }
-                if(fov == -1)
+                if (fov == -1)
                 {
                     fov = FOV;
                 }
-                if(pov == "TP")
+                if (pov == "TP")
                 {
                     SetThirdPersonPOV();
                     SetThirdPersonFOV(fov);
@@ -904,7 +913,7 @@ namespace Rock_Cam_Essentials
                     {
                         SetThirdPersonAngle(TPCameraAngle);
                     }
-                    if(positional_smoothing != -1)
+                    if (positional_smoothing != -1)
                     {
                         SetThirdPersonPositionalSmooting(positional_smoothing);
                     }
@@ -913,7 +922,7 @@ namespace Rock_Cam_Essentials
                         SetThirdPersonRotationalSmooting(rotational_smoothing);
                     }
                 }
-                else if(pov == "FP")
+                else if (pov == "FP")
                 {
                     SetFirstPersonPOV();
                     SetFirstPersonFOV(fov);
@@ -926,7 +935,7 @@ namespace Rock_Cam_Essentials
                         SetFirstPersonRotationalSmooting(rotational_smoothing);
                     }
                 }
-                else if(pov == "HH")
+                else if (pov == "HH")
                 {
                     SetHandheldPOV();
                     SetHandheldFOV(fov);
@@ -1071,7 +1080,7 @@ namespace Rock_Cam_Essentials
             try
             {
                 if (pov == "TP")
-                { 
+                {
                     TPCameraSettings.renderPostProcessing = value;
                 }
                 else if (pov == "FP")
@@ -1087,12 +1096,209 @@ namespace Rock_Cam_Essentials
                     MelonLogger.Error("pov variable must either be TP, FP or HH, you can use the POVs variable for readability if needed.");
                     return false;
                 }
-                    return true;
+                return true;
             }
             catch (Exception ex)
             {
                 MelonLogger.Error(ex);
                 return false;
+            }
+        }
+        public bool SetResolution(uint width, uint height)
+        {
+            try
+            {
+                CameraResolutionDescriptor resolution = new(width, height);
+                LckService.SetTrackResolution(resolution);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                MelonLogger.Error(ex);
+                return false;
+            }
+        }
+        public bool SetVideoBitrate(uint bitrate)
+        {
+            try
+            {
+                LckService.SetTrackBitrate(bitrate);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                MelonLogger.Error(ex);
+                return false;
+            }
+        }
+        public bool SetAudioBitrate(uint bitrate)
+        {
+            try
+            {
+                LckService.SetTrackAudioBitrate(bitrate);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                MelonLogger.Error(ex);
+                return false;
+            }
+        }
+        public bool SetFramerate(uint framerate)
+        {
+            try
+            {
+                LckService.SetTrackFramerate(framerate);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                MelonLogger.Error(ex);
+                return false;
+            }
+        }
+        public bool SetMicrophoneGainUntested(float gain)
+        {
+            try
+            {
+                LckService.SetMicrophoneGain(gain);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                MelonLogger.Error(ex);
+                return false;
+            }
+        }
+        public bool FullRecordingSetup(uint width = 1920, uint height = 1080, uint framerate = 60, uint videoBitrate = 10485760, uint audioBitrate = 1048576)
+        {
+            try
+            {
+                CameraResolutionDescriptor resolution = new(width, height);
+                CameraTrackDescriptor settings = new(resolution, framerate, videoBitrate, audioBitrate);
+                LckService.SetTrackDescriptor(settings);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                MelonLogger.Error(ex);
+                return false;
+            }
+        }
+        public bool RecordMicUntested(bool record)
+        {
+            try
+            {
+                LckService.SetMicrophoneCaptureActive(record);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                MelonLogger.Error(ex);
+                return false;
+            }
+        }
+        public bool SetPOVBypassUntested(string pov = "Null", int detachedpreview = -1)
+        {
+            try
+            {
+                string monitorid = "";
+                if(detachedpreview == -1)
+                {
+                    monitorid = null;
+                }
+                else
+                {
+                    monitorid = DetachedPreviewManager.availablePreviews[detachedpreview].AttachingMonitor.MonitorId;
+                }
+                if(pov == "Null")
+                {
+                    pov = POV;
+                }
+                if (pov == "TP")
+                {
+
+                    LckService.SetActiveCamera(TPCamera.CameraId, monitorid);
+                }
+                else if (pov == "FP")
+                {
+                    LckService.SetActiveCamera(FPCamera.CameraId, monitorid);
+                }
+                else if (pov == "HH")
+                {
+                    LckService.SetActiveCamera(HHCamera.CameraId, monitorid);
+                }
+                else
+                {
+                    MelonLogger.Error("pov variable must either be TP, FP or HH, you can use the POVs variable for readability if needed.");
+                    return false;
+                }
+                UpdateDetachedPreview();
+                return true;
+            }
+            catch (Exception ex)
+            {
+                MelonLogger.Error(ex);
+                return false;
+            }
+        }
+        public bool UpdateDetachedPreview()
+        {
+            try
+            {
+                if (DetachedPreview != DetachedPreviewManager.ActivePreviewNo) DetachedPreviewChanged = true;
+                else DetachedPreviewChanged = false;
+                DetachedPreview = DetachedPreviewManager.ActivePreviewNo;
+                return true;
+            }
+            catch (Exception ex)
+            {
+                MelonLogger.Error(ex);
+                return false;
+            }
+        }
+        public RecordingSettings GetRecordingSetup()
+        {
+            try
+            {
+                RecordingSettings result = new();
+                CameraTrackDescriptor setup = LckService.GetDescriptor().Result.cameraTrackDescriptor;
+                result.framerate = setup.Framerate;
+                result.Bitrate = setup.Bitrate;
+                result.audioBitrate = setup.AudioBitrate;
+                result.width = setup.CameraResolutionDescriptor.Width;
+                result.height = setup.CameraResolutionDescriptor.Height;
+                return result;
+            }
+            catch (Exception ex)
+            {
+                MelonLogger.Error(ex);
+                return new();
+            }
+        }
+        public Vector2 GetVerticalResolution()
+        {
+            try
+            {
+                return new Vector2(CameraController._verticalModeResolution.Width, CameraController._verticalModeResolution.Height);
+            }
+            catch (Exception ex)
+            {
+                MelonLogger.Error(ex);
+                return Vector2.zero;
+            }
+        }
+        public Vector2 GetHorizontalResolutionUntested()
+        {
+            try
+            {
+                return new Vector2(CameraController._pcTrackDescriptor.CameraResolutionDescriptor.Width, 
+                    CameraController._pcTrackDescriptor.CameraResolutionDescriptor.Height);
+            }
+            catch (Exception ex)
+            {
+                MelonLogger.Error(ex);
+                return Vector2.zero;
             }
         }
 
