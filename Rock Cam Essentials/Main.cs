@@ -11,12 +11,11 @@ using System.Data.SqlTypes;
 using UnityEngine;
 using UnityEngine.Assertions;
 using UnityEngine.Rendering;
-
 namespace Rock_Cam_Essentials
 {
     public static class BuildInfo
     {
-        public const string ModName = "Rock_Cam_Essentials";
+        public const string ModName = "RockCamEssentials";
         public const string ModVersion = "1.2.1";
         public const string Author = "Deterraleon";
     }
@@ -108,7 +107,10 @@ namespace Rock_Cam_Essentials
         public LckCamera TPCamera;
         public LckCamera FPCamera;
         public LckCamera HHCamera;
-        
+        public UnityEngine.Rendering.Universal.UniversalAdditionalCameraData TPCameraSettings;
+        public UnityEngine.Rendering.Universal.UniversalAdditionalCameraData FPCameraSettings;
+        public UnityEngine.Rendering.Universal.UniversalAdditionalCameraData HHCameraSettings;
+
         public int isShown = 1;
         public bool POVChanged = false;
         public struct POVNames
@@ -172,6 +174,9 @@ namespace Rock_Cam_Essentials
                 HHCamera = Tablet.selfieCamera;
                 POVUpdate();
                 POVChanged = false;
+                TPCameraSettings = Tablet.thirdPersonCamera.gameObject.GetComponent<UnityEngine.Rendering.Universal.UniversalAdditionalCameraData>();
+                FPCameraSettings = Tablet.firstPersonCamera.gameObject.GetComponent<UnityEngine.Rendering.Universal.UniversalAdditionalCameraData>();
+                HHCameraSettings = Tablet.selfieCamera.gameObject.GetComponent<UnityEngine.Rendering.Universal.UniversalAdditionalCameraData>();
                 return true;
             }
             catch(Exception ex)
@@ -1061,5 +1066,36 @@ namespace Rock_Cam_Essentials
                 return Quaternion.identity;
             }
         }
+        public bool DoPostProcessing(string pov, bool value)
+        {
+            try
+            {
+                if (pov == "TP")
+                { 
+                    TPCameraSettings.renderPostProcessing = value;
+                }
+                else if (pov == "FP")
+                {
+                    FPCameraSettings.renderPostProcessing = value;
+                }
+                else if (pov == "HH")
+                {
+                    HHCameraSettings.renderPostProcessing = value;
+                }
+                else
+                {
+                    MelonLogger.Error("pov variable must either be TP, FP or HH, you can use the POVs variable for readability if needed.");
+                    return false;
+                }
+                    return true;
+            }
+            catch (Exception ex)
+            {
+                MelonLogger.Error(ex);
+                return false;
+            }
+        }
+
+
     }
 }

@@ -47,6 +47,9 @@
     <Reference Include="Unity.InputSystem">
       <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\RUMBLE\MelonLoader\Il2CppAssemblies\Unity.InputSystem.dll</HintPath>
     </Reference>
+    <Reference Include="Unity.RenderPipelines.Universal.Runtime">
+      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\RUMBLE\MelonLoader\Il2CppAssemblies\Unity.RenderPipelines.Universal.Runtime.dll</HintPath>
+    </Reference>
     <Reference Include="Unity.TextMeshPro">
       <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\RUMBLE\MelonLoader\Il2CppAssemblies\Unity.TextMeshPro.dll</HintPath>
     </Reference>
