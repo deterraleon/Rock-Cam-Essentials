@@ -17,7 +17,7 @@ namespace Rock_Cam_Essentials
     public static class BuildInfo
     {
         public const string ModName = "RockCamEssentials";
-        public const string ModVersion = "1.4.0";
+        public const string ModVersion = "1.4.1";
         public const string Author = "Deterraleon";
     }
 
@@ -123,7 +123,7 @@ namespace Rock_Cam_Essentials
         public POVNames POVs;
         public struct RecordingSettings
         {
-            public uint width, height, audioBitrate, Bitrate, framerate, microphoneGain;
+            public uint width, height, audioBitrate, Bitrate, framerate;
         }
         public Rock_Cam()
         {
@@ -1257,18 +1257,11 @@ namespace Rock_Cam_Essentials
                 return false;
             }
         }
-        public RecordingSettings GetRecordingSetup()
+        public RecordingSettings GetRecordingSettings()
         {
             try
             {
-                RecordingSettings result = new();
-                CameraTrackDescriptor setup = LckService.GetDescriptor().Result.cameraTrackDescriptor;
-                result.framerate = setup.Framerate;
-                result.Bitrate = setup.Bitrate;
-                result.audioBitrate = setup.AudioBitrate;
-                result.width = setup.CameraResolutionDescriptor.Width;
-                result.height = setup.CameraResolutionDescriptor.Height;
-                return result;
+                return CameraTrackDescriptorToRecordingSettings(LckService.GetDescriptor().Result.cameraTrackDescriptor);
             }
             catch (Exception ex)
             {
@@ -1276,32 +1269,40 @@ namespace Rock_Cam_Essentials
                 return new();
             }
         }
-        public Vector2 GetVerticalResolution()
+        public RecordingSettings GetVerticalRecordingSettings()
         {
             try
             {
-                return new Vector2(CameraController._verticalModeResolution.Width, CameraController._verticalModeResolution.Height);
+                return CameraTrackDescriptorToRecordingSettings(CameraController._verticalCameraTrackDescriptor);
             }
             catch (Exception ex)
             {
                 MelonLogger.Error(ex);
-                return Vector2.zero;
+                return new();
             }
         }
-        public Vector2 GetHorizontalResolutionUntested()
+        public RecordingSettings GetHorizontalSettings()
         {
             try
             {
-                return new Vector2(CameraController._pcTrackDescriptor.CameraResolutionDescriptor.Width, 
-                    CameraController._pcTrackDescriptor.CameraResolutionDescriptor.Height);
+                return CameraTrackDescriptorToRecordingSettings(CameraController._horizontalCameraTrackDescriptor);
             }
             catch (Exception ex)
             {
                 MelonLogger.Error(ex);
-                return Vector2.zero;
+                return new();
             }
         }
-
+        public RecordingSettings CameraTrackDescriptorToRecordingSettings(CameraTrackDescriptor descriptor)
+        {
+            var settings = new RecordingSettings();
+            settings.width = descriptor.CameraResolutionDescriptor.Width;
+            settings.height = descriptor.CameraResolutionDescriptor.Height;
+            settings.framerate = descriptor.Framerate;
+            settings.audioBitrate = descriptor.AudioBitrate;
+            settings.Bitrate = descriptor.Bitrate;
+            return settings;
+        }
 
     }
 }
