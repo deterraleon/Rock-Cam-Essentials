@@ -12,7 +12,7 @@ namespace Rock_Cam_Essentials
     public static class BuildInfo
     {
         public const string ModName = "RockCamEssentials";
-        public const string ModVersion = "1.5.1";
+        public const string ModVersion = "1.5.2";
         public const string Author = "Deterraleon";
     }
 
@@ -1235,7 +1235,7 @@ namespace Rock_Cam_Essentials
             try
             {
                 CameraResolutionDescriptor resolution = new(width, height);
-                CameraTrackDescriptor settings = new(resolution, framerate, videoBitrate, audioBitrate);
+                CameraTrackDescriptor settings = new(resolution, videoBitrate, framerate, audioBitrate);
                 _LckService.SetTrackDescriptor(settings);
                 return true;
             }
@@ -1255,7 +1255,7 @@ namespace Rock_Cam_Essentials
                 uint videoBitrate = recordingSettings.Bitrate;
                 uint audioBitrate = recordingSettings.audioBitrate;
                 CameraResolutionDescriptor resolution = new(width, height);
-                CameraTrackDescriptor settings = new(resolution, framerate, videoBitrate, audioBitrate);
+                CameraTrackDescriptor settings = new(resolution, videoBitrate, framerate, audioBitrate);
                 _LckService.SetTrackDescriptor(settings);
                 return true;
             }
