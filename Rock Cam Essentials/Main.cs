@@ -1,5 +1,6 @@
 ﻿using Il2CppLiv.Lck;
 using Il2CppLiv.Lck.Recorder;
+using Il2CppLiv.Lck.UI;
 using Il2CppRUMBLE.Managers;
 using Il2CppRUMBLE.Players.Subsystems;
 using Il2CppRUMBLE.Recording.LCK;
@@ -12,7 +13,7 @@ namespace Rock_Cam_Essentials
     public static class BuildInfo
     {
         public const string ModName = "RockCamEssentials";
-        public const string ModVersion = "1.5.2";
+        public const string ModVersion = "1.5.3";
         public const string Author = "Deterraleon";
     }
 
@@ -87,6 +88,7 @@ namespace Rock_Cam_Essentials
         public bool POVChanged = false;
         public LCKTabletDetachedPreview _DetachedPreviewManager;
         public Il2CppTMPro.TMP_Text Nameplate;
+        public LckQualitySelector _QualitySelector;
         public struct POVNames
         {
             public string ThirdPerson, FirstPerson, Handheld;
@@ -95,6 +97,14 @@ namespace Rock_Cam_Essentials
         public struct RecordingSettings
         {
             public uint width, height, audioBitrate, Bitrate, framerate;
+            public static bool operator ==(RecordingSettings a, RecordingSettings b)
+            {
+                return a.width == b.width && a.height == b.height && a.audioBitrate == b.audioBitrate && a.Bitrate == b.Bitrate && a.framerate == b.framerate;
+            }
+            public static bool operator !=(RecordingSettings a, RecordingSettings b)
+            {
+                return !(a == b);
+            }
         }
         public Rock_Cam()
         {
@@ -690,6 +700,7 @@ namespace Rock_Cam_Essentials
                 _LckService = _Camera.lckService;
                 _DetachedPreviewManager = _Tablet.lckDetachedPreview;
                 Nameplate = _Tablet.gameObject.GetComponent<LCKTabletNameplate>().nameplateTextComponent.textObject;
+                _QualitySelector = _CameraController._qualitySelector;
                 return true;
             }
             catch (Exception ex)
@@ -1230,7 +1241,7 @@ namespace Rock_Cam_Essentials
             }
         }
         //Macros to set up several parameters at once
-        public bool FullRecordingSetup(uint width = 1920, uint height = 1080, uint framerate = 60, uint videoBitrate = 10485760, uint audioBitrate = 1048576)
+        public bool FullRecordingSetupTemp(uint width = 1920, uint height = 1080, uint framerate = 60, uint videoBitrate = 10485760, uint audioBitrate = 1048576)
         {
             try
             {
@@ -1245,19 +1256,44 @@ namespace Rock_Cam_Essentials
                 return false;
             }
         }
+        public bool FullRecordingSetupTemp(RecordingSettings recordingSettings)
+        {
+            try
+            {
+                return FullRecordingSetup(recordingSettings.width, recordingSettings.height,
+                    recordingSettings.framerate, recordingSettings.Bitrate, recordingSettings.audioBitrate);
+            }
+            catch (Exception ex)
+            {
+                MelonLogger.Error(ex);
+                return false;
+            }
+        }
+        public bool FullRecordingSetup(uint width = 1920, uint height = 1080, uint framerate = 60, uint videoBitrate = 10485760, uint audioBitrate = 1048576)
+        {
+            try
+            {
+                CameraResolutionDescriptor resolution = new(width, height);
+                CameraTrackDescriptor settings = new(resolution, videoBitrate, framerate, audioBitrate);
+                QualityOption qualityOption = new QualityOption();
+                qualityOption.CameraTrackDescriptor = settings;
+                qualityOption.IsDefault = true;
+                _QualitySelector._qualityOptions[1]= qualityOption;
+                _QualitySelector.UpdateCurrentTrackDescriptor(1);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                MelonLogger.Error(ex);
+                return false;
+            }
+        }
         public bool FullRecordingSetup(RecordingSettings recordingSettings)
         {
             try
             {
-                uint width = recordingSettings.width;
-                uint height = recordingSettings.height;
-                uint framerate = recordingSettings.framerate;
-                uint videoBitrate = recordingSettings.Bitrate;
-                uint audioBitrate = recordingSettings.audioBitrate;
-                CameraResolutionDescriptor resolution = new(width, height);
-                CameraTrackDescriptor settings = new(resolution, videoBitrate, framerate, audioBitrate);
-                _LckService.SetTrackDescriptor(settings);
-                return true;
+                return FullRecordingSetup(recordingSettings.width, recordingSettings.height,
+                    recordingSettings.framerate, recordingSettings.Bitrate, recordingSettings.audioBitrate);
             }
             catch (Exception ex)
             {
