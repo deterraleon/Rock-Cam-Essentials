@@ -1260,7 +1260,7 @@ namespace Rock_Cam_Essentials
         {
             try
             {
-                return FullRecordingSetup(recordingSettings.width, recordingSettings.height,
+                return FullRecordingSetupTemp(recordingSettings.width, recordingSettings.height,
                     recordingSettings.framerate, recordingSettings.Bitrate, recordingSettings.audioBitrate);
             }
             catch (Exception ex)
