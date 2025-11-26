@@ -1,11 +1,15 @@
 ﻿using Il2CppLiv.Lck;
 using Il2CppLiv.Lck.Recorder;
 using Il2CppLiv.Lck.UI;
+using Il2CppRUMBLE.Interactions.InteractionBase.Extensions;
 using Il2CppRUMBLE.Managers;
 using Il2CppRUMBLE.Players.Subsystems;
 using Il2CppRUMBLE.Recording.LCK;
+using Il2CppSystem.IO;
 using MelonLoader;
 using RumbleModdingAPI;
+using System.ComponentModel;
+
 //using RumbleModUI;
 using UnityEngine;
 namespace Rock_Cam_Essentials
@@ -65,6 +69,7 @@ namespace Rock_Cam_Essentials
         public ThirdPerson thirdPerson;
         public FirstPerson firstPerson;
         public Handheld handheld;
+        public HandleBars handleBars;
         public string POV = "HH";
         public bool isHorizontal = true;
         public int PhotoTimer = 0;
@@ -669,6 +674,47 @@ namespace Rock_Cam_Essentials
                 }
             }
         }
+        public class HandleBars
+        {
+            public InteractionHoldableGroup _Handles;
+            public int isHeld = 0;
+            public int isDoubleHeld = 0;
+            public HandleBars(Rock_Cam rockcam)
+            {
+                _Handles = rockcam._Tablet.InteractionHoldableGroup;
+            }
+            public int isHeldUpdate()
+            {
+                try
+                {
+                    if (_Handles.GroupIsBeingHeld() != (isHeld % 2 == 1)) { isHeld = 2; }
+                    else { isHeld = 0; }
+                    if (_Handles.GroupIsBeingHeld()) { isHeld++; }
+                    return isHeld;
+                }
+                catch (Exception ex)
+                {
+                    MelonLogger.Msg("Hai");
+                    MelonLogger.Error(ex);
+                    return isHeld;
+                }
+            }
+            public int isDoubleHeldUpdate()
+            {
+                try
+                {
+                    if (_Handles.DualHoldingObject != (isDoubleHeld % 2 == 1)) { isDoubleHeld = 2; }
+                    else { isDoubleHeld = 0; }
+                    if (_Handles.DualHoldingObject) { isDoubleHeld++; }
+                    return isDoubleHeld;
+                }
+                catch (Exception ex)
+                {
+                    MelonLogger.Error(ex);
+                    return isDoubleHeld;
+                }
+            }
+        }
         //Basically just redefines every variable
         public bool Fix()
         {
@@ -687,6 +733,7 @@ namespace Rock_Cam_Essentials
                 thirdPerson = new ThirdPerson(this);
                 firstPerson = new FirstPerson(this);
                 handheld = new Handheld(this);
+                handleBars = new HandleBars(this);
                 DetachedMonitors = _CameraController._monitorTransforms;
                 FOV = thirdPerson._FOVSetter._currentValue;
                 PhotoTimer = _Tablet.photoTimerCurrentValue;
