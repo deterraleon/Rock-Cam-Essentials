@@ -35,7 +35,7 @@ namespace Rock_Cam_Essentials
 
         public override void OnLateInitializeMelon()
         {
-            Calls.onMapInitialized += mapLoaded;
+            //RumbleModdingAPI.RMAPI.Actions.onMapInitialized += mapLoaded;
             //UI.instance.UI_Initialized += UIInit;
         }
 
@@ -55,11 +55,6 @@ namespace Rock_Cam_Essentials
         //{
         //    enabled = (bool)settings[0].SavedValue;
         //}
-
-        public void mapLoaded()
-        {
-            
-        }
     }
     //A unility that allows for easier modding of the rockcam
     //The functions of the main class the actions you can do with the rockcam, while subclasses are mainly used for settings
@@ -728,7 +723,7 @@ namespace Rock_Cam_Essentials
                 MaximumRenderDistance = _Tablet.maximumRenderDistance;
                 isRecording = _Tablet.isRecording;
                 _CameraController = _Tablet.LckCameraController;
-                isHorizontal = _CameraController.IsHorizontalMode;
+                isHorizontal = _CameraController.IsSelfieFront;
                 _POVController = _CameraController._settingsButtonsController;
                 thirdPerson = new ThirdPerson(this);
                 firstPerson = new FirstPerson(this);
@@ -744,7 +739,7 @@ namespace Rock_Cam_Essentials
                 else isShown = 0;
                 POVUpdate();
                 POVChanged = false;
-                _LckService = _Camera.lckService;
+                //_LckService = _Camera.lckService;
                 _DetachedPreviewManager = _Tablet.lckDetachedPreview;
                 Nameplate = _Tablet.gameObject.GetComponent<LCKTabletNameplate>().nameplateTextComponent.textObject;
                 _QualitySelector = _CameraController._qualitySelector;
@@ -1220,7 +1215,7 @@ namespace Rock_Cam_Essentials
                 return Quaternion.identity;
             }
         }
-        public bool SetResolution(uint width, uint height)
+        public bool SetResolutionDEPRICATED(uint width, uint height)
         {
             try
             {
@@ -1234,7 +1229,7 @@ namespace Rock_Cam_Essentials
                 return false;
             }
         }
-        public bool SetVideoBitrate(uint bitrate)
+        public bool SetVideoBitrateDEPRICATED(uint bitrate)
         {
             try
             {
@@ -1247,7 +1242,7 @@ namespace Rock_Cam_Essentials
                 return false;
             }
         }
-        public bool SetAudioBitrate(uint bitrate)
+        public bool SetAudioBitrateDEPRICATED(uint bitrate)
         {
             try
             {
@@ -1260,7 +1255,7 @@ namespace Rock_Cam_Essentials
                 return false;
             }
         }
-        public bool SetFramerate(uint framerate)
+        public bool SetFramerateDEPRICATED(uint framerate)
         {
             try
             {
@@ -1274,7 +1269,7 @@ namespace Rock_Cam_Essentials
             }
         }
         //No idea what this does, maybe mic volume?
-        public bool SetMicrophoneGainUntested(float gain)
+        public bool SetMicrophoneGainUntestedDEPRICATED(float gain)
         {
             try
             {
@@ -1288,7 +1283,7 @@ namespace Rock_Cam_Essentials
             }
         }
         //Macros to set up several parameters at once
-        public bool FullRecordingSetupTemp(uint width = 1920, uint height = 1080, uint framerate = 60, uint videoBitrate = 10485760, uint audioBitrate = 1048576)
+        public bool FullRecordingSetupTempDEPRICATED(uint width = 1920, uint height = 1080, uint framerate = 60, uint videoBitrate = 10485760, uint audioBitrate = 1048576)
         {
             try
             {
@@ -1303,11 +1298,11 @@ namespace Rock_Cam_Essentials
                 return false;
             }
         }
-        public bool FullRecordingSetupTemp(RecordingSettings recordingSettings)
+        public bool FullRecordingSetupTempDEPRICATED(RecordingSettings recordingSettings)
         {
             try
             {
-                return FullRecordingSetupTemp(recordingSettings.width, recordingSettings.height,
+                return FullRecordingSetupTempDEPRICATED(recordingSettings.width, recordingSettings.height,
                     recordingSettings.framerate, recordingSettings.Bitrate, recordingSettings.audioBitrate);
             }
             catch (Exception ex)
@@ -1323,7 +1318,7 @@ namespace Rock_Cam_Essentials
                 CameraResolutionDescriptor resolution = new(width, height);
                 CameraTrackDescriptor settings = new(resolution, videoBitrate, framerate, audioBitrate);
                 QualityOption qualityOption = new QualityOption();
-                qualityOption.CameraTrackDescriptor = settings;
+                qualityOption.RecordingCameraTrackDescriptor = settings;
                 qualityOption.IsDefault = true;
                 _QualitySelector._qualityOptions[1]= qualityOption;
                 _QualitySelector.UpdateCurrentTrackDescriptor(1);
@@ -1349,7 +1344,7 @@ namespace Rock_Cam_Essentials
             }
         }
         //Probably controls whether the mic is recorded or not, but haven't checked yet
-        public bool RecordMicUntested(bool record)
+        public bool RecordMicUntestedDEPRICATED(bool record)
         {
             try
             {
@@ -1363,7 +1358,7 @@ namespace Rock_Cam_Essentials
             }
         }
         //Using some voodoo magic to set the pov without the usual function that does that, could result in weird behaviour
-        public bool SetPOVBypassUntested(string pov = "Null", int detachedpreview = -1)
+        public bool SetPOVBypassUntestedDEPRICATED(string pov = "Null", int detachedpreview = -1)
         {
             try
             {
@@ -1425,7 +1420,7 @@ namespace Rock_Cam_Essentials
             }
         }
         //Recording settings for a camera in the current mode
-        public RecordingSettings GetRecordingSettings()
+        public RecordingSettings GetRecordingSettingsDEPRICATED()
         {
             try
             {
@@ -1437,25 +1432,13 @@ namespace Rock_Cam_Essentials
                 return new();
             }
         }
-        //Recording settings for a camera in vertical mode
-        public RecordingSettings GetVerticalRecordingSettings()
+        //Recording settings for a camera
+        public RecordingSettings GetRecordingSettingsDEPRICATEDKINDA()
         {
             try
             {
-                return CameraTrackDescriptorToRecordingSettings(_CameraController._verticalCameraTrackDescriptor);
-            }
-            catch (Exception ex)
-            {
-                MelonLogger.Error(ex);
                 return new();
-            }
-        }
-        //Recording settings for a camera in horizontal mode
-        public RecordingSettings GetHorizontalSettings()
-        {
-            try
-            {
-                return CameraTrackDescriptorToRecordingSettings(_CameraController._horizontalCameraTrackDescriptor);
+                //return CameraTrackDescriptorToRecordingSettings(_CameraController.GetDescriptorForCurrentOrientation({));
             }
             catch (Exception ex)
             {
