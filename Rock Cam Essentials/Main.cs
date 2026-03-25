@@ -12,12 +12,13 @@ using System.ComponentModel;
 
 //using RumbleModUI;
 using UnityEngine;
+using UnityEngine.Playables;
 namespace Rock_Cam_Essentials
 {
     public static class BuildInfo
     {
         public const string ModName = "RockCamEssentials";
-        public const string ModVersion = "1.6.0";
+        public const string ModVersion = "1.6.1";
         public const string Author = "Deterraleon";
     }
 
@@ -83,7 +84,7 @@ namespace Rock_Cam_Essentials
         public Il2CppRUMBLE.Recording.LCK.Extensions.LCKSettingsButtonsController _POVController;
         public Il2CppInterop.Runtime.InteropTypes.Arrays.Il2CppReferenceArray<Transform> DetachedMonitors;
         public Transform RockCamTransform;
-        public LckService _LckService;
+        public ILckService _LckService;
         public int isShown = 1;
         public bool POVChanged = false;
         public LCKTabletDetachedPreview _DetachedPreviewManager;
@@ -721,7 +722,7 @@ namespace Rock_Cam_Essentials
                 TabletSpawnDelay = _Camera.tabletSpawnDelay;
                 _Tablet = _Camera.LckTablet;
                 MaximumRenderDistance = _Tablet.maximumRenderDistance;
-                isRecording = _Tablet.isRecording;
+                isRecording = _GetRecordingStatus();
                 _CameraController = _Tablet.LckCameraController;
                 isHorizontal = _CameraController.IsSelfieFront;
                 _POVController = _CameraController._settingsButtonsController;
@@ -739,7 +740,7 @@ namespace Rock_Cam_Essentials
                 else isShown = 0;
                 POVUpdate();
                 POVChanged = false;
-                //_LckService = _Camera.lckService;
+                _LckService = _CameraController._lckService;
                 _DetachedPreviewManager = _Tablet.lckDetachedPreview;
                 Nameplate = _Tablet.gameObject.GetComponent<LCKTabletNameplate>().nameplateTextComponent.textObject;
                 _QualitySelector = _CameraController._qualitySelector;
@@ -797,10 +798,10 @@ namespace Rock_Cam_Essentials
         //Starts the recording, won't do anything if already recording
         public bool StartRecording()
         {
-            if (isRecording != _Camera.LckTablet.isRecording)
+            if (isRecording != _GetRecordingStatus())
             {
                 MelonLogger.Msg("isRecording variable is desynched");
-                isRecording = _Camera.LckTablet.isRecording;
+                isRecording = _GetRecordingStatus();
             }
             if (!isRecording)
             {
@@ -825,10 +826,10 @@ namespace Rock_Cam_Essentials
         //Ends the recording, won't do anything if already not recording
         public bool EndRecording()
         {
-            if (isRecording != _Camera.LckTablet.isRecording)
+            if (isRecording != _GetRecordingStatus())
             {
                 MelonLogger.Msg("isRecording variable is desynched");
-                isRecording = _Camera.LckTablet.isRecording;
+                isRecording = _GetRecordingStatus();
             }
             if (isRecording)
             {
@@ -1113,12 +1114,23 @@ namespace Rock_Cam_Essentials
                 return -1;
             }
         }
+        public bool _GetRecordingStatus()
+        {
+            try
+            {
+                return !(_Tablet.colorLerpStartTime == null);
+            }
+            catch
+            {
+                return false;
+            }
+        }
         //Returns whether the camera is recording or not, will probs change later to work the same way as isShown
         public bool IsRecording()
         {
             try
             {
-                isRecording = _Tablet.isRecording;
+                isRecording = _GetRecordingStatus();
                 return isRecording;
             }
             catch (Exception ex)
@@ -1126,6 +1138,7 @@ namespace Rock_Cam_Essentials
                 MelonLogger.Error(ex);
                 return false;
             }
+            return true;
         }
         //This function is required to be run every frame if you want the POVChanged to be accurate
         //The function updates the POV and POVChanged variable
@@ -1438,7 +1451,7 @@ namespace Rock_Cam_Essentials
             try
             {
                 return new();
-                //return CameraTrackDescriptorToRecordingSettings(_CameraController.GetDescriptorForCurrentOrientation({));
+                //return CameraTrackDescriptorToRecordingSettings(_CameraController.GetDescriptorForCurrentOrientation());
             }
             catch (Exception ex)
             {
