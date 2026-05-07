@@ -126,10 +126,10 @@ namespace Rock_Cam_Essentials
             try
             {
                 _Camera = PlayerManager.instance.localPlayer.Controller.GetComponentInChildren<PlayerLIV>();
-                _FOVSetter = _CameraController.ThirdPersonFOVDoubleButton;
                 _Tablet = _Camera.LckTablet;
                 MaximumRenderDistance = _Tablet.maximumRenderDistance;
                 _CameraController = _Tablet.LckCameraController;
+                _FOVSetter = _CameraController.ThirdPersonFOVDoubleButton;
                 _POVController = _CameraController._settingsButtonsController;
                 thirdPerson = new ThirdPerson(this);
                 firstPerson = new FirstPerson(this);
