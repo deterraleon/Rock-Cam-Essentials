@@ -8,17 +8,19 @@ using Il2CppRUMBLE.Recording.LCK;
 using Il2CppSystem.IO;
 using MelonLoader;
 using RumbleModdingAPI;
+using System;
 using System.ComponentModel;
 
 //using RumbleModUI;
 using UnityEngine;
 using UnityEngine.Playables;
+using static Il2CppRootMotion.FinalIK.HitReactionVRIK;
 namespace Rock_Cam_Essentials
 {
     public static class BuildInfo
     {
         public const string ModName = "RockCamEssentials";
-        public const string ModVersion = "1.6.2";
+        public const string ModVersion = "2.0.0";
         public const string Author = "Deterraleon";
     }
 
@@ -61,23 +63,26 @@ namespace Rock_Cam_Essentials
     //The functions of the main class the actions you can do with the rockcam, while subclasses are mainly used for settings
     public class Rock_Cam
     {
-        public int FOV = 50;
         public ThirdPerson thirdPerson;
         public FirstPerson firstPerson;
         public Handheld handheld;
         public HandleBars handleBars;
-        public string POV = "HH";
-        public bool isHorizontal = true;
-        public int PhotoTimer = 0;
-        public int PhotoTimerIncrement = 2;
-        public int PhotoTimerMaxValue = 8;
-        public bool isRecording = false;
-        public int DetachedPreview = 0;
-        public bool DetachedPreviewChanged = false;
-        public int MaxDespawnDistance = 2;
-        public float SpawnYOffset = -0.1f;
-        public float TabletSpawnDelay = 0.3f;
-        public float MaximumRenderDistance = 2;
+        public Il2CppRUMBLE.Recording.LCK.Extensions.LckDoubleButton _FOVSetter;
+        public int FOV { get => (int)_CameraController.GetCurrentModeFOV(); set => SetFOV(value); }
+        public int PhotoTimer { get => _Tablet.photoTimerCurrentValue; set => SetPhotoTimerValue(value); }
+        public int PhotoTimerIncrement { get => _Tablet.photoTimerIncrementValue; set => _Tablet.photoTimerIncrementValue = value; }
+        public int PhotoTimerMaxValue { get => _Tablet.photoTimerMaxValue; set => _Tablet.photoTimerMaxValue = value; }
+        public bool IsRecording { get => _GetRecordingStatus(); set => SetRecordingStatus(value); }
+        public int DetachedPreview { get => _DetachedPreviewManager.ActivePreviewNo; set => _Tablet.lckDetachedPreview.SwitchPreview(value);  }
+        public bool detachedPreviewChanged = false; //needs to be updated
+        public int MaxDespawnDistance { get => _Camera.maxDespawnDistance; set => _Camera.maxDespawnDistance = value; }
+        public float SpawnYOffset { get => _Camera.spawnYOffset; set => _Camera.spawnYOffset = value; }
+        public float TabletSpawnDelay { get => _Camera.tabletSpawnDelay; set => _Camera.tabletSpawnDelay = value; }
+        public float MaximumRenderDistance { get => _Tablet.maximumRenderDistance; set => _Tablet.maximumRenderDistance = value; }
+        public int MaxFOV { get => _FOVSetter._maxValue; set => _FOVSetter._maxValue = value; }
+        public int MinFOV { get => _FOVSetter._minValue; set => _FOVSetter._minValue = value; }
+        public int FOVStep { get => _FOVSetter._increment; set => _FOVSetter._increment = value; }
+        public int _oldDetachedPreview = 0;
         public PlayerLIV _Camera;
         public LCKTabletUtility _Tablet;
         public Il2CppRUMBLE.Recording.LCK.Extensions.LCKCameraController _CameraController;
@@ -86,7 +91,8 @@ namespace Rock_Cam_Essentials
         public Transform RockCamTransform;
         public ILckService _LckService;
         public int isShown = 1;
-        public bool POVChanged = false;
+        public string pov = "HH";
+        public bool povChanged = false;
         public LCKTabletDetachedPreview _DetachedPreviewManager;
         public Il2CppTMPro.TMP_Text Nameplate;
         public LckQualitySelector _QualitySelector;
@@ -114,624 +120,22 @@ namespace Rock_Cam_Essentials
             POVs.Handheld = "HH";
             Fix();
         }
-        //Everything related to the third person camera
-        public class ThirdPerson
-        {
-            public Il2CppRUMBLE.Recording.LCK.Extensions.LCKCameraController _CameraController;
-            public Il2CppRUMBLE.Recording.LCK.Extensions.LckDoubleButton _FOVSetter;
-            public int MaxFOV = 100;
-            public int MinFOV = 30;
-            public int FOVStep = 10;
-            public bool isFlipped = false;
-            public float Distance = 1;
-            public float Angle = 15;
-            public UnityEngine.Rendering.Universal.UniversalAdditionalCameraData _CameraSettings;
-            public LckCamera _Camera;
-            public float PositionalSmoothing = 0;
-            public float RotationalSmoothing = 0;
-            public Il2CppRUMBLE.Recording.LCK.Extensions.LCKSettingsButtonsController _POVController;
-            public Rock_Cam _rockcam;
-            public ThirdPerson(Rock_Cam rockcam)
-            {
-                _rockcam = rockcam;
-                _CameraController = rockcam._CameraController;
-                _Camera = rockcam._Tablet.thirdPersonCamera;
-                Distance = _CameraController._thirdPersonDistance;
-                Angle = _CameraController._thirdPersonHeightAngle;
-                _FOVSetter = _CameraController.ThirdPersonFOVDoubleButton;
-                MaxFOV = _FOVSetter._maxValue;
-                MinFOV = _FOVSetter._minValue;
-                FOVStep = _FOVSetter._increment;
-                PositionalSmoothing = _CameraController._thirdPersonStabilizer.PositionalSmoothing;
-                RotationalSmoothing = _CameraController._thirdPersonStabilizer.RotationalSmoothing;
-                _CameraSettings = rockcam._Tablet.thirdPersonCamera.gameObject.GetComponent<UnityEngine.Rendering.Universal.UniversalAdditionalCameraData>();
-                _POVController = rockcam._POVController;
-
-            }
-            //Sets the POV to third person mode
-            public bool SetPOV()
-            {
-                try
-                {
-                    _POVController.SwitchToTPMode();
-                    _rockcam.POV = "TP";
-                }
-                catch (Exception ex)
-                {
-                    MelonLogger.Error(ex);
-                    return false;
-                }
-                return true;
-            }
-            //Sets the angle at which the third person camera follows the player
-            public bool SetAngle(float angle)
-            {
-                try
-                {
-                    _CameraController._thirdPersonHeightAngle = angle;
-                    Angle = angle;
-                    return true;
-                }
-                catch (Exception ex)
-                {
-                    MelonLogger.Error(ex);
-                    return false;
-                }
-            }
-            //Sets the distance at which the third person camera follows the player, this value is the one that gets changed via the ingame buttons
-            //Also gets multiplied by the third person distance multiplier
-            public bool SetDistance(float distance)
-            {
-                try
-                {
-                    _CameraController._thirdPersonDistance = distance;
-                    Distance = distance;
-                    return true;
-                }
-                catch (Exception ex)
-                {
-                    MelonLogger.Error(ex);
-                    return false;
-                }
-            }
-            //Sets the distance multiplier that is multiplier, that is multiplied by the distance to get the actual distance at which the camera will follow the player
-            public bool SetDistanceMultiplier(float distanceMultiplier)
-            {
-                try
-                {
-                    _CameraController._thirdPersonDistanceMultiplier = distanceMultiplier;
-                    return true;
-                }
-                catch (Exception ex)
-                {
-                    MelonLogger.Error(ex);
-                    return false;
-                }
-            }
-            //Flips the third person camera, as of now very buggy
-            public bool FlipCamera(bool flip)
-            {
-                if (isFlipped != _CameraController.IsThirdPersonFront)
-                {
-                    MelonLogger.Msg("isFlippedTP variable desynched");
-                    isFlipped = _CameraController.IsThirdPersonFront;
-                }
-                if (flip == isFlipped)
-                {
-                    MelonLogger.Msg("TP camera already flipped correct way");
-                    return true;
-                }
-                try
-                {
-                    isFlipped = flip;
-                    _CameraController.IsThirdPersonFront = !_CameraController.IsThirdPersonFront;
-                    return true;
-                }
-                catch (Exception ex)
-                {
-                    MelonLogger.Error(ex);
-                    return false;
-                }
-            }
-            //Sets the positional smoothing of the third person camera
-            public bool SetPositionalSmooting(float smooth)
-            {
-                if (smooth >= 1 && smooth != 99)
-                {
-                    MelonLogger.Warning("Smoothing of 1 or greater will result in no movement at all, you can set smoothing to 99 to avoid this message");
-                }
-                try
-                {
-                    _CameraController._thirdPersonStabilizer.PositionalSmoothing = smooth;
-                    PositionalSmoothing = smooth;
-                }
-                catch (Exception ex)
-                {
-                    MelonLogger.Error(ex);
-                    return false;
-                }
-                return true;
-            }
-            //Sets the rotational smoothing of the third person camera
-            public bool SetRotationalSmooting(float smooth)
-            {
-                if (smooth >= 1 && smooth != 99)
-                {
-                    MelonLogger.Warning("Smoothing of 1 or greater will result in no movement at all, you can set smoothing to 99 to avoid this message");
-                }
-                try
-                {
-                    _CameraController._thirdPersonStabilizer.RotationalSmoothing = smooth;
-                    RotationalSmoothing = smooth;
-                }
-                catch (Exception ex)
-                {
-                    MelonLogger.Error(ex);
-                    return false;
-                }
-                return true;
-            }
-            //Sets the FOV of the third person camera, written in a way where it will also update the ingame values shown
-            public bool SetFOV(int fov)
-            {
-                if (_FOVSetter._currentValue != _rockcam.FOV)
-                {
-                    MelonLogger.Msg("FOV value desynched");
-                    _rockcam.FOV = _FOVSetter._currentValue;
-                }
-                try
-                {
-                    _FOVSetter._maxValue = 999999;
-                    _FOVSetter._increment = fov - _rockcam.FOV;
-                    _FOVSetter.OnPressDownIncrease();
-                    _FOVSetter.OnPressUpIncrease();
-                    _FOVSetter._maxValue = MaxFOV;
-                    _FOVSetter._increment = FOVStep;
-                    _rockcam.FOV = fov;
-                    if (_rockcam.FOV != _FOVSetter._currentValue)
-                    {
-                        MelonLogger.Msg(_rockcam.FOV.ToString() + " " + _FOVSetter._currentValue.ToString());
-                    }
-                    return true;
-                }
-                catch (Exception ex)
-                {
-                    MelonLogger.Error(ex);
-                    return false;
-                }
-            }
-            //Sets the settings settings, aka the bounds for the FOV setting ingame, for the third person camera
-            public bool SetFOVSettingsSettings(int maxFOV, int minFOV, int step)
-            {
-                try
-                {
-                    _FOVSetter._maxValue = maxFOV;
-                    _FOVSetter._increment = step;
-                    _FOVSetter._minValue = minFOV;
-                    MaxFOV = maxFOV;
-                    MinFOV = minFOV;
-                    FOVStep = step;
-                    return true;
-                }
-                catch (Exception ex)
-                {
-                    MelonLogger.Error(ex);
-                    return false;
-                }
-            }
-            public bool DoPostProcessing(bool value)
-            {
-                try
-                {
-                    _CameraSettings.renderPostProcessing = value;
-                    return true;
-                }
-                catch (Exception ex)
-                {
-                    MelonLogger.Error(ex);
-                    return false;
-                }
-            }
-        }
-        //Everything related to the first person camera
-        public class FirstPerson
-        {
-            public Il2CppRUMBLE.Recording.LCK.Extensions.LCKCameraController _CameraController;
-            public Il2CppRUMBLE.Recording.LCK.Extensions.LckDoubleButton _FOVSetter;
-            public int MaxFOV = 100;
-            public int MinFOV = 30;
-            public int FOVStep = 10;
-            public UnityEngine.Rendering.Universal.UniversalAdditionalCameraData _CameraSettings;
-            public LckCamera _Camera;
-            public float PositionalSmoothing = 0;
-            public float RotationalSmoothing = 0;
-            public Il2CppRUMBLE.Recording.LCK.Extensions.LCKSettingsButtonsController _POVController;
-            public Rock_Cam _rockcam;
-            public FirstPerson(Rock_Cam rockcam)
-            {
-                _rockcam = rockcam;
-                _CameraController = rockcam._CameraController;
-                _Camera = rockcam._Tablet.firstPersonCamera;
-                _FOVSetter = _CameraController.FirstPersonFOVDoubleButton;
-                MaxFOV = _FOVSetter._maxValue;
-                MinFOV = _FOVSetter._minValue;
-                FOVStep = _FOVSetter._increment;
-                PositionalSmoothing = _CameraController._firstPersonStabilizer.PositionalSmoothing;
-                RotationalSmoothing = _CameraController._firstPersonStabilizer.RotationalSmoothing;
-                _CameraSettings = rockcam._Tablet.firstPersonCamera.gameObject.GetComponent<UnityEngine.Rendering.Universal.UniversalAdditionalCameraData>();
-                _POVController = rockcam._POVController;
-            }
-            //Sets the POV to first person mode
-            public bool SetPOV()
-            {
-                try
-                {
-                    _POVController.SwitchToFPMode();
-                    _rockcam.POV = "FP";
-                }
-                catch (Exception ex)
-                {
-                    MelonLogger.Error(ex);
-                    return false;
-                }
-                return true;
-            }
-            //Sets the positional smoothing of the first person camera
-            public bool SetPositionalSmooting(float smooth)
-            {
-                if (smooth >= 1 && smooth != 99)
-                {
-                    MelonLogger.Warning("Smoothing of 1 or greater will result in no movement at all, you can set smoothing to 99 to avoid this message");
-                }
-                try
-                {
-                    _CameraController._firstPersonStabilizer.PositionalSmoothing = smooth;
-                    PositionalSmoothing = smooth;
-                }
-                catch (Exception ex)
-                {
-                    MelonLogger.Error(ex);
-                    return false;
-                }
-                return true;
-            }
-            //Sets the rotational smoothing of the first person camera
-            public bool SetRotationalSmooting(float smooth)
-            {
-                if (smooth >= 1 && smooth != 99)
-                {
-                    MelonLogger.Warning("Smoothing of 1 or greater will result in no movement at all, you can set smoothing to 99 to avoid this message");
-                }
-                try
-                {
-                    _CameraController._firstPersonStabilizer.RotationalSmoothing = smooth;
-                    RotationalSmoothing = smooth;
-                }
-                catch (Exception ex)
-                {
-                    MelonLogger.Error(ex);
-                    return false;
-                }
-                return true;
-            }
-            //Sets the FOV of the first person camera, written in a way where it will also update the ingame values shown
-            public bool SetFOV(int fov)
-            {
-                if (_FOVSetter._currentValue != _rockcam.FOV)
-                {
-                    MelonLogger.Msg("FOV value desynched");
-                    _rockcam.FOV = _FOVSetter._currentValue;
-                }
-                try
-                {
-                    _FOVSetter._maxValue = 999999;
-                    _FOVSetter._increment = fov - _rockcam.FOV;
-                    _FOVSetter.OnPressDownIncrease();
-                    _FOVSetter.OnPressUpIncrease();
-                    _FOVSetter._maxValue = MaxFOV;
-                    _FOVSetter._increment = FOVStep;
-                    _rockcam.FOV = fov;
-                    if (_rockcam.FOV != _FOVSetter._currentValue)
-                    {
-                        MelonLogger.Msg(_rockcam.FOV.ToString() + " " + _FOVSetter._currentValue.ToString());
-                    }
-                    return true;
-                }
-                catch (Exception ex)
-                {
-                    MelonLogger.Error(ex);
-                    return false;
-                }
-            }
-            //Sets the settings settings, aka the bounds for the FOV setting ingame, for the first person camera
-            public bool SetFOVSettingsSettings(int maxFOV, int minFOV, int step)
-            {
-                try
-                {
-                    _FOVSetter._maxValue = maxFOV;
-                    _FOVSetter._increment = step;
-                    _FOVSetter._minValue = minFOV;
-                    MaxFOV = maxFOV;
-                    MinFOV = minFOV;
-                    FOVStep = step;
-                    return true;
-                }
-                catch (Exception ex)
-                {
-                    MelonLogger.Error(ex);
-                    return false;
-                }
-            }
-            public bool DoPostProcessing(bool value)
-            {
-                try
-                {
-                    _CameraSettings.renderPostProcessing = value;
-                    return true;
-                }
-                catch (Exception ex)
-                {
-                    MelonLogger.Error(ex);
-                    return false;
-                }
-            }
-        }
-        //Everything related to the handheld(selfie) camera
-        public class Handheld
-        {
-            public Il2CppRUMBLE.Recording.LCK.Extensions.LCKCameraController _CameraController;
-            public Il2CppRUMBLE.Recording.LCK.Extensions.LckDoubleButton _FOVSetter;
-            public int MaxFOV = 100;
-            public int MinFOV = 30;
-            public int FOVStep = 10;
-            public UnityEngine.Rendering.Universal.UniversalAdditionalCameraData _CameraSettings;
-            public LckCamera _Camera;
-            public float PositionalSmoothing = 0;
-            public float RotationalSmoothing = 0;
-            public Il2CppRUMBLE.Recording.LCK.Extensions.LCKSettingsButtonsController _POVController;
-            public Rock_Cam _rockcam;
-            public bool isFlipped = false;
-            public Handheld(Rock_Cam rockcam)
-            {
-                _rockcam = rockcam;
-                _CameraController = rockcam._CameraController;
-                _Camera = rockcam._Tablet.selfieCamera;
-                _FOVSetter = _CameraController.SelfieFOVDoubleButton;
-                MaxFOV = _FOVSetter._maxValue;
-                MinFOV = _FOVSetter._minValue;
-                FOVStep = _FOVSetter._increment;
-                PositionalSmoothing = _CameraController._selfieStabilizer.PositionalSmoothing;
-                RotationalSmoothing = _CameraController._selfieStabilizer.RotationalSmoothing;
-                _CameraSettings = rockcam._Tablet.selfieCamera.gameObject.GetComponent<UnityEngine.Rendering.Universal.UniversalAdditionalCameraData>();
-                _POVController = rockcam._POVController;
-            }
-            //Sets the POV to handheld mode
-            public bool SetPOV()
-            {
-                try
-                {
-                    _POVController.SwitchToSelfieMode();
-                    _rockcam.POV = "HH";
-                }
-                catch (Exception ex)
-                {
-                    MelonLogger.Error(ex);
-                    return false;
-                }
-                return true;
-            }
-            //Sets the positional smoothing of the handheld camera
-            public bool SetPositionalSmooting(float smooth)
-            {
-                if (smooth >= 1 && smooth != 99)
-                {
-                    MelonLogger.Warning("Smoothing of 1 or greater will result in no movement at all, you can set smoothing to 99 to avoid this message");
-                }
-                try
-                {
-                    _CameraController._selfieStabilizer.PositionalSmoothing = smooth;
-                    PositionalSmoothing = smooth;
-                }
-                catch (Exception ex)
-                {
-                    MelonLogger.Error(ex);
-                    return false;
-                }
-                return true;
-            }
-            //Sets the rotational smoothing of the handheld camera
-            public bool SetRotationalSmooting(float smooth)
-            {
-                if (smooth >= 1 && smooth != 99)
-                {
-                    MelonLogger.Warning("Smoothing of 1 or greater will result in no movement at all, you can set smoothing to 99 to avoid this message");
-                }
-                try
-                {
-                    _CameraController._selfieStabilizer.RotationalSmoothing = smooth;
-                    RotationalSmoothing = smooth;
-                }
-                catch (Exception ex)
-                {
-                    MelonLogger.Error(ex);
-                    return false;
-                }
-                return true;
-            }
-            //Sets the FOV of the handheld camera, written in a way where it will also update the ingame values shown
-            public bool SetFOV(int fov)
-            {
-                if (_FOVSetter._currentValue != _rockcam.FOV)
-                {
-                    MelonLogger.Msg("FOV value desynched");
-                    _rockcam.FOV = _FOVSetter._currentValue;
-                }
-                try
-                {
-                    _FOVSetter._maxValue = 999999;
-                    _FOVSetter._increment = fov - _rockcam.FOV;
-                    _FOVSetter.OnPressDownIncrease();
-                    _FOVSetter.OnPressUpIncrease();
-                    _FOVSetter._maxValue = MaxFOV;
-                    _FOVSetter._increment = FOVStep;
-                    _rockcam.FOV = fov;
-                    if (_rockcam.FOV != _FOVSetter._currentValue)
-                    {
-                        MelonLogger.Msg(_rockcam.FOV.ToString() + " " + _FOVSetter._currentValue.ToString());
-                    }
-                    return true;
-                }
-                catch (Exception ex)
-                {
-                    MelonLogger.Error(ex);
-                    return false;
-                }
-            }
-            //Sets the settings settings, aka the bounds for the FOV setting ingame, for the handheld camera
-            public bool SetFOVSettingsSettings(int maxFOV, int minFOV, int step)
-            {
-                try
-                {
-                    _FOVSetter._maxValue = maxFOV;
-                    _FOVSetter._increment = step;
-                    _FOVSetter._minValue = minFOV;
-                    MaxFOV = maxFOV;
-                    MinFOV = minFOV;
-                    FOVStep = step;
-                    return true;
-                }
-                catch (Exception ex)
-                {
-                    MelonLogger.Error(ex);
-                    return false;
-                }
-            }
-            //Flips the handheld camera, very buggy
-            public bool FlipCamera(bool flip)
-            {
-                if (isFlipped == flip)
-                {
-                    MelonLogger.Msg("HH camera already flipped the right way");
-                    return true;
-                }
-                try
-                {
-                    _CameraController.ProcessSelfieFlip();
-                    isFlipped = flip;
-                    return true;
-                }
-                catch (Exception ex)
-                {
-                    MelonLogger.Error(ex);
-                    return false;
-                }
-            }
-            //Sets the position of the handheld camera relative to the rockcam
-            public bool SetRelativeCameraPosition(Vector3 position, Vector3 rotation)
-            {
-                try
-                {
-                    _CameraController.SetSelfieCameraOrientation(position, rotation);
-                    return true;
-                }
-                catch (Exception ex)
-                {
-                    MelonLogger.Error(ex);
-                    return false;
-                }
-            }
-            //Sets the position of the handheld camera in global coords
-            public bool SetGlobalCameraPosition(Vector3 position, Quaternion rotation)
-            {
-                try
-                {
-                    var position2 = _rockcam.RockCamTransform.InverseTransformPoint(position);
-                    Quaternion rotation2 = Quaternion.Inverse(_rockcam.RockCamTransform.rotation) * rotation;
-                    _CameraController.SetSelfieCameraOrientation(position2, rotation2.eulerAngles);
-                    return true;
-                }
-                catch (Exception ex)
-                {
-                    MelonLogger.Error(ex);
-                    return false;
-                }
-            }
-            public bool DoPostProcessing(bool value)
-            {
-                try
-                {
-                    _CameraSettings.renderPostProcessing = value;
-                    return true;
-                }
-                catch (Exception ex)
-                {
-                    MelonLogger.Error(ex);
-                    return false;
-                }
-            }
-        }
-        public class HandleBars
-        {
-            public InteractionHoldableGroup _Handles;
-            public int isHeld = 0;
-            public int isDoubleHeld = 0;
-            public HandleBars(Rock_Cam rockcam)
-            {
-                _Handles = rockcam._Tablet.InteractionHoldableGroup;
-            }
-            public int isHeldUpdate()
-            {
-                try
-                {
-                    if (_Handles.GroupIsBeingHeld() != (isHeld % 2 == 1)) { isHeld = 2; }
-                    else { isHeld = 0; }
-                    if (_Handles.GroupIsBeingHeld()) { isHeld++; }
-                    return isHeld;
-                }
-                catch (Exception ex)
-                {
-                    MelonLogger.Msg("Hai");
-                    MelonLogger.Error(ex);
-                    return isHeld;
-                }
-            }
-            public int isDoubleHeldUpdate()
-            {
-                try
-                {
-                    if (_Handles.DualHoldingObject != (isDoubleHeld % 2 == 1)) { isDoubleHeld = 2; }
-                    else { isDoubleHeld = 0; }
-                    if (_Handles.DualHoldingObject) { isDoubleHeld++; }
-                    return isDoubleHeld;
-                }
-                catch (Exception ex)
-                {
-                    MelonLogger.Error(ex);
-                    return isDoubleHeld;
-                }
-            }
-        }
         //Basically just redefines every variable
         public bool Fix()
         {
             try
             {
                 _Camera = PlayerManager.instance.localPlayer.Controller.GetComponentInChildren<PlayerLIV>();
-                MaxDespawnDistance = _Camera.maxDespawnDistance;
-                SpawnYOffset = _Camera.spawnYOffset;
-                TabletSpawnDelay = _Camera.tabletSpawnDelay;
+                _FOVSetter = _CameraController.ThirdPersonFOVDoubleButton;
                 _Tablet = _Camera.LckTablet;
                 MaximumRenderDistance = _Tablet.maximumRenderDistance;
-                isRecording = _GetRecordingStatus();
                 _CameraController = _Tablet.LckCameraController;
-                isHorizontal = _CameraController.IsSelfieFront;
                 _POVController = _CameraController._settingsButtonsController;
                 thirdPerson = new ThirdPerson(this);
                 firstPerson = new FirstPerson(this);
                 handheld = new Handheld(this);
                 handleBars = new HandleBars(this);
                 DetachedMonitors = _CameraController._monitorTransforms;
-                FOV = thirdPerson._FOVSetter._currentValue;
                 PhotoTimer = _Tablet.photoTimerCurrentValue;
                 PhotoTimerIncrement = _Tablet.photoTimerIncrementValue;
                 PhotoTimerMaxValue = _Tablet.photoTimerMaxValue;
@@ -739,7 +143,7 @@ namespace Rock_Cam_Essentials
                 if (_Camera.TabletVisualsAreActive) isShown = 1;
                 else isShown = 0;
                 POVUpdate();
-                POVChanged = false;
+                povChanged = false;
                 _LckService = _CameraController._lckService;
                 _DetachedPreviewManager = _Tablet.lckDetachedPreview;
                 Nameplate = _Tablet.gameObject.GetComponent<LCKTabletNameplate>().nameplateTextComponent.textObject;
@@ -751,8 +155,50 @@ namespace Rock_Cam_Essentials
                 MelonLogger.Error(ex);
                 return false;
             }
-        } 
-        //Takes a photo
+        }
+        /// <summary>
+        ///Sets the settings settings, aka the bounds for the FOV setting ingame, for the third person camera
+        /// </summary>
+        public bool SetFOVSettingsSettings(int maxFOV, int minFOV, int step)
+        {
+            try
+            {
+                MaxFOV = maxFOV;
+                MinFOV = minFOV;
+                FOVStep = step;
+                return true;
+            }
+            catch (Exception ex)
+            {
+                MelonLogger.Error(ex);
+                return false;
+            }
+        }
+        /// <summary>
+        /// DO NOT USE, JUST SET THE VARIABLE DIRECTLY
+        ///Sets the FOV of the third person camera, written in a way where it will also update the ingame values shown
+        /// </summary>
+        public bool SetFOV(int fov)
+        {
+            try
+            {
+                _FOVSetter._maxValue = 999999;
+                _FOVSetter._increment = fov - FOV;
+                _FOVSetter.OnPressDownIncrease();
+                _FOVSetter.OnPressUpIncrease();
+                _FOVSetter._maxValue = MaxFOV;
+                _FOVSetter._increment = FOVStep;
+                return true;
+            }
+            catch (Exception ex)
+            {
+                MelonLogger.Error(ex);
+                return false;
+            }
+        }
+        /// <summary>
+        ///Takes a photo
+        /// </summary>
         public bool TakePhoto()
         {
             try
@@ -766,7 +212,9 @@ namespace Rock_Cam_Essentials
             }
             return true;
         }
-        //Hides the tablet, same function used when trying to summon the table while being close to it
+        /// <summary>
+        ///Hides the tablet, same function used when trying to summon the table while being close to it
+        /// </summary>
         public bool HideTablet()
         {
             try
@@ -780,8 +228,10 @@ namespace Rock_Cam_Essentials
             }
             return true;
         }
-        //Shows the tablet, same function used when trying to summon it regularly
-        //During the spawn delay the tablet is not active, which could cause issues when trying to modify its position continuously, where it kinda just freezes for a moment.
+        /// <summary>
+        ///Shows the tablet, same function used when trying to summon it regularly
+        ///During the spawn delay the tablet is not active, which could cause issues when trying to modify its position continuously, where it kinda just freezes for a moment.
+        /// </summary>
         public bool ShowTablet()
         {
             try
@@ -795,17 +245,13 @@ namespace Rock_Cam_Essentials
             }
             return true;
         }
-        //Starts the recording, won't do anything if already recording
+        /// <summary>
+        ///Starts the recording, won't do anything if already recording
+        /// </summary> 
         public bool StartRecording()
         {
-            if (isRecording != _GetRecordingStatus())
+            if (!IsRecording)
             {
-                MelonLogger.Msg("isRecording variable is desynched");
-                isRecording = _GetRecordingStatus();
-            }
-            if (!isRecording)
-            {
-                isRecording = true;
                 try
                 {
                     _Tablet.ToggleRecordingAndUpdateRecordStatus();
@@ -823,17 +269,13 @@ namespace Rock_Cam_Essentials
             }
             return true;
         }
-        //Ends the recording, won't do anything if already not recording
+        /// <summary>
+        ///Ends the recording, won't do anything if already not recording
+        /// </summary>
         public bool EndRecording()
         {
-            if (isRecording != _GetRecordingStatus())
+            if (IsRecording)
             {
-                MelonLogger.Msg("isRecording variable is desynched");
-                isRecording = _GetRecordingStatus();
-            }
-            if (isRecording)
-            {
-                isRecording = false;
                 try
                 {
                     _Tablet.ToggleRecordingAndUpdateRecordStatus();
@@ -846,18 +288,14 @@ namespace Rock_Cam_Essentials
             }
             return true;
         }
+        /// <summary>
+        /// Toggles recording status
+        /// </summary>
         public bool ToggleRecording()
         {
             try
             {
-                if (IsRecording())
-                {
-                    EndRecording();
-                }
-                else
-                {
-                    StartRecording();
-                }
+                _Tablet.ToggleRecordingAndUpdateRecordStatus();
                 return true;
             }
             catch (Exception e)
@@ -866,30 +304,57 @@ namespace Rock_Cam_Essentials
                 return false;
             }
         }
-        //Sets the rotational smoothing for all cameras
+        /// <summary>
+        ///Sets the recording status to the value
+        /// </summary>
+        public bool SetRecordingStatus(bool value)
+        {
+            try
+            {
+                if (value == IsRecording)
+                {
+                    return true;
+                }
+                if (value) EndRecording();
+                else StartRecording();
+                return true;
+            }
+            catch (Exception e)
+            {
+                MelonLogger.Error(e);
+                return false;
+            }
+        }
+        /// <summary>
+        ///Sets the rotational smoothing for all cameras
+        /// </summary>
         public bool SetGlobalRotationalSmoothing(float smooth)
         {
             return thirdPerson.SetRotationalSmooting(smooth) && firstPerson.SetRotationalSmooting(smooth) && handheld.SetRotationalSmooting(smooth);
         }
-        //Sets the positional smoothing for all cameras
+        /// <summary>
+        ///Sets the positional smoothing for all cameras
+        /// </summary>
         public bool SetGlobalPositionalSmoothing(float smooth)
         {
             return thirdPerson.SetPositionalSmooting(smooth) && firstPerson.SetPositionalSmooting(smooth) && handheld.SetPositionalSmooting(smooth);
         }
-        //Makes the camera instantly reach its destination ignoring smoothing, no idea why i wrote the same function twice lmao
+        /// <summary>
+        ///Makes the camera instantly reach its destination ignoring smoothing, no idea why i wrote the same function twice lmao
+        /// </summary>
         public bool ResetCameraPosition()
         {
             try
             {
-                if (POV == "TP")
+                if (pov == "TP")
                 {
                     _CameraController._thirdPersonStabilizer.ReachTargetInstantly();
                 }
-                if (POV == "FP")
+                if (pov == "FP")
                 {
                     _CameraController._firstPersonStabilizer.ReachTargetInstantly();
                 }
-                if (POV == "HH")
+                if (pov == "HH")
                 {
                     _CameraController._selfieStabilizer.ReachTargetInstantly();
                 }
@@ -901,7 +366,10 @@ namespace Rock_Cam_Essentials
             }
             return true;
         }
-        //Sets the distance at which the camera screen will update the camera image
+        /// <summary>
+        ///Sets the distance at which the camera screen will update the camera image, deprecated
+        /// </summary>
+        [Obsolete("Just set the variable directly")]
         public bool SetMaximumRenderDistance(float distance)
         {
             try
@@ -916,6 +384,11 @@ namespace Rock_Cam_Essentials
             }
             return true;
         }
+        [Obsolete("Just set the variable directly")]
+        /// <summary>
+        /// Deprecated, update the variable directly.
+        /// Sets the detached preview
+        /// </summary>
         public bool SetDetachedPreview(int index)
         {
             try
@@ -934,11 +407,13 @@ namespace Rock_Cam_Essentials
         {
             try
             {
-                _Tablet.photoTimerMaxValue = 999999;
-                _Tablet.photoTimerIncrementValue = time - PhotoTimer;
+                int oldmaxtimervalue = PhotoTimerMaxValue;
+                int oldincrement = PhotoTimerIncrement;
+                PhotoTimerMaxValue = 999999;
+                PhotoTimerIncrement = time - PhotoTimer;
                 _Tablet.SwapPhotoTimerDelay();
-                _Tablet.photoTimerMaxValue = PhotoTimerMaxValue;
-                _Tablet.photoTimerIncrementValue = PhotoTimerIncrement;
+                PhotoTimerMaxValue = oldmaxtimervalue;
+                PhotoTimerIncrement = oldincrement;
                 return true;
             }
             catch (Exception ex)
@@ -947,13 +422,15 @@ namespace Rock_Cam_Essentials
                 return false;
             }
         }
-        //Sets the increment by which it will increase the photo timer upon pressing the ingame button
+        /// <summary>
+        ///Sets the increment by which it will increase the photo timer upon pressing the ingame button
+        /// </summary>
+        [Obsolete("Just set the variable directly")]
         public bool SetPhotoTimerIncrement(int increment)
         {
             try
             {
                 _Tablet.photoTimerIncrementValue = increment;
-                PhotoTimerIncrement = increment;
                 return true;
             }
             catch (Exception ex)
@@ -962,13 +439,15 @@ namespace Rock_Cam_Essentials
                 return false;
             }
         }
-        //Sets the max value of the ingame photo timer, upon exceeding the max value the photo timer will drop to 0.
+        /// <summary>
+        ///Sets the max value of the ingame photo timer, upon exceeding the max value the photo timer will drop to 0.
+        /// </summary> 
+        [Obsolete("Just set the variable directly")]
         public bool SetPhotoTimerMaxValue(int maxValue)
         {
             try
             {
                 _Tablet.photoTimerMaxValue = maxValue;
-                PhotoTimerMaxValue = maxValue;
                 return true;
             }
             catch (Exception ex)
@@ -977,7 +456,9 @@ namespace Rock_Cam_Essentials
                 return false;
             }
         }
-        //Literally just changes the transform of the rockcam object
+        /// <summary>
+        ///Literally just changes the transform of the rockcam object
+        /// </summary>
         public bool SetRockCamPosition(Vector3 position, Quaternion rotation)
         {
             try
@@ -992,13 +473,15 @@ namespace Rock_Cam_Essentials
                 return false;
             }
         }
-        //Set the y offset upon spawn
+        /// <summary>
+        ///Set the y offset upon spawn
+        /// </summary>
+        [Obsolete("Just set the variable directly")]
         public bool SetSpawnYOffset(float offset)
         {
             try
             {
                 _Camera.spawnYOffset = offset;
-                SpawnYOffset = offset;
                 return true;
             }
             catch (Exception ex)
@@ -1007,13 +490,15 @@ namespace Rock_Cam_Essentials
                 return false;
             }
         }
-        //Set for how long the camera isn't active upon spawning
+        /// <summary>
+        ///Set for how long the camera isn't active upon spawning
+        /// </summary>
+        [Obsolete("Just set the variable directly")]
         public bool SetRockCamSpawnDelay(float delay)
         {
             try
             {
                 _Camera.tabletSpawnDelay = delay;
-                TabletSpawnDelay = delay;
                 return true;
             }
             catch (Exception ex)
@@ -1022,7 +507,9 @@ namespace Rock_Cam_Essentials
                 return false;
             }
         }
-        //Makes the camera instantly reach its destination ignoring smoothing, no idea why i wrote the same function twice lmao
+        /// <summary>
+        ///Makes the camera instantly reach its destination ignoring smoothing, no idea why i wrote the same function twice lmao
+        /// </summary>
         public bool SnapCameraStabilizerToTarget()
         {
             try
@@ -1038,15 +525,18 @@ namespace Rock_Cam_Essentials
                 return false;
             }
         }
-        //A macros to just set a bunch of variables at once
+        /// <summary>
+        ///A macros to just set a bunch of variables at once
+        /// </summary>
         public bool FullCameraSetup(string pov = "Null", float positional_smoothing = -1, float rotational_smoothing = -1, int fov = -1,
             float TPCameraDistance = -1, float TPCameraAngle = -1)
         {
             try
             {
+                SetFOV(fov);
                 if (pov == "Null")
                 {
-                    pov = POV;
+                    pov = this.pov;
                 }
                 if (fov == -1)
                 {
@@ -1055,7 +545,6 @@ namespace Rock_Cam_Essentials
                 if (pov == "TP")
                 {
                     thirdPerson.SetPOV();
-                    thirdPerson.SetFOV(fov);
                     if (TPCameraDistance == -1)
                     {
                         TPCameraDistance = thirdPerson.Distance;
@@ -1077,7 +566,6 @@ namespace Rock_Cam_Essentials
                 else if (pov == "FP")
                 {
                     firstPerson.SetPOV();
-                    firstPerson.SetFOV(fov);
                     if (positional_smoothing != -1)
                     {
                         firstPerson.SetPositionalSmooting(positional_smoothing);
@@ -1090,7 +578,6 @@ namespace Rock_Cam_Essentials
                 else if (pov == "HH")
                 {
                     handheld.SetPOV();
-                    handheld.SetFOV(fov);
                     if (positional_smoothing != -1)
                     {
                         handheld.SetPositionalSmooting(positional_smoothing);
@@ -1113,8 +600,10 @@ namespace Rock_Cam_Essentials
                 return false;
             }
         }
-        //This function is required to be run every frame if you want the isShown variable to be accurate.
-        //This variable will be 0 if the camera isn't shown, 1 if it became hidden just now, 2 if it shown and 3 if it became shown just now
+        /// <summary>
+        ///This function is required to be run every frame if you want the isShown variable to be accurate.
+        ///This variable will be 0 if the camera isn't shown, 1 if it became hidden just now, 2 if it shown and 3 if it became shown just now
+        /// </summary>
         public int IsShownUpdate()
         {
             try
@@ -1134,6 +623,9 @@ namespace Rock_Cam_Essentials
                 return -1;
             }
         }
+        /// <summary>
+        /// Gets the recording status, just get the variable directly
+        /// </summary>
         public bool _GetRecordingStatus()
         {
             try
@@ -1145,24 +637,11 @@ namespace Rock_Cam_Essentials
                 return false;
             }
         }
-        //Returns whether the camera is recording or not, will probs change later to work the same way as isShown
-        public bool IsRecording()
-        {
-            try
-            {
-                isRecording = _GetRecordingStatus();
-                return isRecording;
-            }
-            catch (Exception ex)
-            {
-                MelonLogger.Error(ex);
-                return false;
-            }
-            return true;
-        }
-        //This function is required to be run every frame if you want the POVChanged to be accurate
-        //The function updates the POV and POVChanged variable
-        //POVChanged will be true iff the POV is different from what it was on the previous frame
+        /// <summary>
+        ///This function is required to be run every frame if you want the POVChanged to be accurate.
+        ///The function updates the POV and POVChanged variable.
+        ///POVChanged will be true iff the POV is different from what it was on the previous frame.
+        /// </summary>
         public bool POVUpdate()
         {
             try
@@ -1170,34 +649,34 @@ namespace Rock_Cam_Essentials
                 bool povchanged = false;
                 if (_CameraController.CurrentCameraMode == Il2CppRUMBLE.Recording.LCK.Extensions.CameraMode.ThirdPerson)
                 {
-                    if (POV != "TP")
+                    if (pov != "TP")
                     {
                         povchanged = true;
                     }
-                    POV = "TP";
+                    pov = "TP";
                 }
                 else if (_CameraController.CurrentCameraMode == Il2CppRUMBLE.Recording.LCK.Extensions.CameraMode.FirstPerson)
                 {
-                    if (POV != "FP")
+                    if (pov != "FP")
                     {
                         povchanged = true;
                     }
-                    POV = "FP";
+                    pov = "FP";
                 }
                 else if (_CameraController.CurrentCameraMode == Il2CppRUMBLE.Recording.LCK.Extensions.CameraMode.Selfie)
                 {
-                    if (POV != "HH")
+                    if (pov != "HH")
                     {
                         povchanged = true;
                     }
-                    POV = "HH";
+                    pov = "HH";
                 }
                 else
                 {
                     MelonLogger.Error("Error determining the POV");
                     return false;
                 }
-                POVChanged = povchanged;
+                povChanged = povchanged;
                 return true;
             }
             catch (Exception ex)
@@ -1206,21 +685,9 @@ namespace Rock_Cam_Essentials
                 return false;
             }
         }
-        //Updates the FOV, maybe i'll make it work like POVUpdate()
-        public bool FOVUpdate()
-        {
-            try
-            {
-                FOV = (int)_CameraController.GetCurrentModeFOV();
-                return true;
-            }
-            catch (Exception ex)
-            {
-                MelonLogger.Error(ex);
-                return false;
-            }
-        }
-        //Returns the spawn position the camera would have if it were spawned right now
+        /// <summary>
+        ///Returns the spawn position the camera would have if it were spawned right now
+        /// </summary>
         public Vector3 GetSpawnPosition()
         {
             try
@@ -1234,7 +701,9 @@ namespace Rock_Cam_Essentials
                 return Vector3.zero;
             }
         }
-        //Returns the spawn rotation the camera would have if it were spawned right now
+        /// <summary>
+        ///Returns the spawn rotation the camera would have if it were spawned right now
+        /// </summary>
         public Quaternion GetSpawnRotation()
         {
             try
@@ -1301,7 +770,9 @@ namespace Rock_Cam_Essentials
                 return false;
             }
         }
-        //No idea what this does, maybe mic volume?
+        /// <summary>
+        ///No idea what this does, maybe mic volume?
+        /// </summary>
         public bool SetMicrophoneGainUntestedDEPRICATED(float gain)
         {
             try
@@ -1315,7 +786,9 @@ namespace Rock_Cam_Essentials
                 return false;
             }
         }
-        //Macros to set up several parameters at once
+        /// <summary>
+        ///Macros to set up several parameters at once
+        /// </summary>
         public bool FullRecordingSetupTempDEPRICATED(uint width = 1920, uint height = 1080, uint framerate = 60, uint videoBitrate = 10485760, uint audioBitrate = 1048576)
         {
             try
@@ -1376,8 +849,10 @@ namespace Rock_Cam_Essentials
                 return false;
             }
         }
-        //Probably controls whether the mic is recorded or not, but haven't checked yet
-        public bool RecordMicUntestedDEPRICATED(bool record)
+        /// <summary>
+        ///Probably controls whether the mic is recorded or not, but haven't checked yet
+        /// </summary>
+        public bool RecordMicUntested(bool record)
         {
             try
             {
@@ -1390,8 +865,10 @@ namespace Rock_Cam_Essentials
                 return false;
             }
         }
-        //Using some voodoo magic to set the pov without the usual function that does that, could result in weird behaviour
-        public bool SetPOVBypassUntestedDEPRICATED(string pov = "Null", int detachedpreview = -1)
+        /// <summary>
+        ///Using some voodoo magic to set the pov without the usual function that does that, could result in weird behaviour
+        /// </summary>
+        public bool SetPOVBypassUntested(string pov = "Null", int detachedpreview = -1)
         {
             try
             {
@@ -1406,7 +883,7 @@ namespace Rock_Cam_Essentials
                 }
                 if(pov == "Null")
                 {
-                    pov = POV;
+                    pov = this.pov;
                 }
                 if (pov == "TP")
                 {
@@ -1435,15 +912,17 @@ namespace Rock_Cam_Essentials
                 return false;
             }
         }
-        //This function is required to be run every frame for the DetachedPreviewChanged variable to be accurate.
-        //Updates the DetachedPreview and DetachedPreviewChanged variables
+        /// <summary>
+        ///This function is required to be run every frame for the DetachedPreviewChanged variable to be accurate.
+        ///Updates the DetachedPreviewChanged variable
+        /// </summary>
         public bool UpdateDetachedPreview()
         {
             try
             {
-                if (DetachedPreview != _DetachedPreviewManager.ActivePreviewNo) DetachedPreviewChanged = true;
-                else DetachedPreviewChanged = false;
-                DetachedPreview = _DetachedPreviewManager.ActivePreviewNo;
+                if (DetachedPreview != _oldDetachedPreview) detachedPreviewChanged = true;
+                else detachedPreviewChanged = false;
+                _oldDetachedPreview = DetachedPreview;
                 return true;
             }
             catch (Exception ex)
@@ -1452,8 +931,10 @@ namespace Rock_Cam_Essentials
                 return false;
             }
         }
-        //Recording settings for a camera in the current mode
-        public RecordingSettings GetRecordingSettingsDEPRICATED()
+        /// <summary>
+        ///Recording settings for a camera in the current mode
+        /// </summary> 
+        public RecordingSettings GetRecordingSettings()
         {
             try
             {
@@ -1465,7 +946,9 @@ namespace Rock_Cam_Essentials
                 return new();
             }
         }
-        //Recording settings for a camera
+        /// <summary>
+        ///Recording settings for a camera
+        /// </summary>
         public RecordingSettings GetRecordingSettingsDEPRICATEDKINDA()
         {
             try
@@ -1479,7 +962,9 @@ namespace Rock_Cam_Essentials
                 return new();
             }
         }
-        //Convert the CameraTrackDescriptor type(the one used ingame) to RecordingSettings(type defined within RCE), to allow for easier usage
+        /// <summary>
+        ///Convert the CameraTrackDescriptor type(the one used ingame) to RecordingSettings(type defined within RCE), to allow for easier usage
+        /// </summary>
         public RecordingSettings CameraTrackDescriptorToRecordingSettings(CameraTrackDescriptor descriptor)
         {
             var settings = new RecordingSettings();
