@@ -65,7 +65,6 @@ namespace Rock_Cam_Essentials
             try
             {
                 _CameraController._selfieStabilizer.PositionalSmoothing = smooth;
-                PositionalSmoothing = smooth;
             }
             catch (Exception ex)
             {
@@ -88,7 +87,6 @@ namespace Rock_Cam_Essentials
             try
             {
                 _CameraController._selfieStabilizer.RotationalSmoothing = smooth;
-                RotationalSmoothing = smooth;
             }
             catch (Exception ex)
             {
