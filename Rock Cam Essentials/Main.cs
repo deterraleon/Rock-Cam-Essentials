@@ -18,7 +18,7 @@ namespace Rock_Cam_Essentials
     public static class BuildInfo
     {
         public const string ModName = "RockCamEssentials";
-        public const string ModVersion = "1.6.1";
+        public const string ModVersion = "1.6.2";
         public const string Author = "Deterraleon";
     }
 
@@ -846,6 +846,26 @@ namespace Rock_Cam_Essentials
             }
             return true;
         }
+        public bool ToggleRecording()
+        {
+            try
+            {
+                if (IsRecording())
+                {
+                    EndRecording();
+                }
+                else
+                {
+                    StartRecording();
+                }
+                return true;
+            }
+            catch (Exception e)
+            {
+                MelonLogger.Error(e);
+                return false;
+            }
+        }
         //Sets the rotational smoothing for all cameras
         public bool SetGlobalRotationalSmoothing(float smooth)
         {
@@ -1118,7 +1138,7 @@ namespace Rock_Cam_Essentials
         {
             try
             {
-                return !(_Tablet.colorLerpStartTime == null);
+                return !(_Tablet.recordLightCoroutine == null);
             }
             catch
             {
