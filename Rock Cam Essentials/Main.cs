@@ -9,6 +9,7 @@ using Il2CppSystem.IO;
 using MelonLoader;
 using RumbleModdingAPI;
 using System;
+using System.Collections;
 using System.ComponentModel;
 
 //using RumbleModUI;
@@ -74,7 +75,7 @@ namespace Rock_Cam_Essentials
         public int PhotoTimerMaxValue { get => _Tablet.photoTimerMaxValue; set => _Tablet.photoTimerMaxValue = value; }
         public bool IsRecording { get => _GetRecordingStatus(); set => SetRecordingStatus(value); }
         public int DetachedPreview { get => _DetachedPreviewManager.ActivePreviewNo; set => _Tablet.lckDetachedPreview.SwitchPreview(value);  }
-        public bool detachedPreviewChanged = false; //needs to be updated
+        public bool detachedPreviewChanged = false; 
         public int MaxDespawnDistance { get => _Camera.maxDespawnDistance; set => _Camera.maxDespawnDistance = value; }
         public float SpawnYOffset { get => _Camera.spawnYOffset; set => _Camera.spawnYOffset = value; }
         public float TabletSpawnDelay { get => _Camera.tabletSpawnDelay; set => _Camera.tabletSpawnDelay = value; }
@@ -120,7 +121,186 @@ namespace Rock_Cam_Essentials
             POVs.Handheld = "HH";
             Fix();
         }
-        //Basically just redefines every variable
+
+        private IEnumerator innertester()
+        {
+            TabletSpawnDelay = 5;
+            Melon<Main>.Instance.LoggerInstance.Msg("Commensing part one of the general RCE test, firstly check that the tablet takes 5 seconds to appear after getting despawned");
+            while(isShown%2 == 1)
+            {
+                IsShownUpdate();
+                yield return null;
+            }
+            while(isShown%2 == 0)
+            {
+                IsShownUpdate();
+                yield return null;
+            }
+            Melon<Main>.Instance.LoggerInstance.Msg("check that FOV is at 10, increasing the FOV makes it go to 110 and you can't increase it further," +
+                " decreasing the fov makes it go to 10, then to 5");
+            Melon<Main>.Instance.LoggerInstance.Msg("Check that photo timer is at 15, pressing it makes it go to 18, then to 0");
+            MaxFOV = 110;
+            FOVStep = 100;
+            MinFOV = 5;
+            FOV = 10;
+            PhotoTimerMaxValue = 19;
+            PhotoTimerIncrement = 3;
+            PhotoTimer = 15;
+            Melon<Main>.Instance.LoggerInstance.Msg("Check that detached preview is at the latest one, press the detached preview button to go to the next step");
+            DetachedPreview = 5;
+            while(detachedPreviewChanged == false)
+            {
+                UpdateDetachedPreview();
+                yield return null;
+            }
+            TakePhoto();
+            Melon<Main>.Instance.LoggerInstance.Msg("Assert that the photo has been taken, start a recording to go to the next step");
+            while(IsRecording == false) { yield return null; }
+            yield return new WaitForSeconds(2f);
+            IsRecording = false;
+            Melon<Main>.Instance.LoggerInstance.Msg("Assert that the recording has ended after 2 seconds");
+            MaxDespawnDistance = 10000;
+            Melon<Main>.Instance.LoggerInstance.Msg("Assert that the tablet takes despawns instead of teleporting to you if you are far away");
+            while (isShown%2 == 1)
+            {
+                IsShownUpdate();
+                yield return null;
+            }
+            SpawnYOffset = 10;
+            Melon<Main>.Instance.LoggerInstance.Msg("Assert that the camera spawns rly high");
+            while (isShown % 2 == 0)
+            {
+                IsShownUpdate();
+                yield return null;
+            }
+            ShowTablet();
+            yield return new WaitForSeconds(2);
+            HideTablet();
+            yield return new WaitForSeconds(2); 
+            ShowTablet();
+            Melon<Main>.Instance.LoggerInstance.Msg("Assert that the tablet was shown, then hidden, then shown again in 2 second intervals");
+            yield return new WaitForSeconds(2);
+            SetGlobalPositionalSmoothing(1);
+            SetGlobalRotationalSmoothing(0.9f);
+            handheld.SetPOV();
+            Melon<Main>.Instance.LoggerInstance.Msg("Assert that the camera is in handheld," +
+                " while not following your hand movements and turning very slowly, the next step will begin when you switch the pov");
+            while(pov == "HH")
+            {
+                POVUpdate();
+                yield return null;
+            }
+            if(povChanged == false)
+            {
+                Melon<Main>.Instance.LoggerInstance.Warning("povChanged is false, should be true");
+            }
+            ResetCameraPosition();
+            handheld.SetPOV();
+            Melon<Main>.Instance.LoggerInstance.Msg("Assert that the camera has snapped to the tablet");
+            MaximumRenderDistance = 0;
+            Melon<Main>.Instance.LoggerInstance.Msg("Assert that the image on rockcam has stopped updating, switch to first person to go to first person testing");
+            POVUpdate();
+            while(pov != POVs.FirstPerson)
+            {
+                POVUpdate();
+                yield return null;
+            }
+            Melon<Main>.Instance.LoggerInstance.Msg("This concludes the general RCE test.");
+            Melon<Main>.Instance.LoggerInstance.Msg("Assert that the camera doesn't move and rotates slowly");
+            Melon<Main>.Instance.LoggerInstance.Msg("To go to the next step switch to any other pov");
+            POVUpdate();
+            while(pov == POVs.FirstPerson)
+            {
+                POVUpdate();
+                yield return null;
+            }
+            yield return new WaitForSeconds(1.5f);
+            firstPerson.SetPOV();
+            Melon<Main>.Instance.LoggerInstance.Msg("Assert that the camera switched to first person after 1.5 seconds");
+            Melon<Main>.Instance.LoggerInstance.Msg("This concludes first person testing");
+            Melon<Main>.Instance.LoggerInstance.Msg("Switch to handheld pov to go to the next step");
+            POVUpdate();
+            while(pov != POVs.Handheld)
+            {
+                POVUpdate(); 
+                yield return null;
+            }
+            Melon<Main>.Instance.LoggerInstance.Msg("Assert that the camera doesn't move and rotates slowly");
+            Melon<Main>.Instance.LoggerInstance.Msg("To go to the next step switch to any other pov");
+            POVUpdate();
+            while (pov == POVs.Handheld)
+            {
+                POVUpdate();
+                yield return null;
+            }
+            yield return new WaitForSeconds(1.5f);
+            handheld.SetPOV();
+            Melon<Main>.Instance.LoggerInstance.Msg("Assert that the camera switched to first person after 1.5 seconds");
+            handheld.PositionalSmoothing = 0;
+            handheld.SetRelativeCameraPosition(Vector3.one * 5, Vector3.zero);
+            Melon<Main>.Instance.LoggerInstance.Msg("Assert that the camera moves normally and is also offset from the tablet");
+            Melon<Main>.Instance.LoggerInstance.Msg("To go to the next step switch to any other pov");
+            POVUpdate();
+            while (pov == POVs.Handheld)
+            {
+                POVUpdate();
+                yield return null;
+            }
+            yield return new WaitForSeconds(0.75f);
+            handheld.SetPOV();
+            handheld.PositionalSmoothing = 1;
+            handheld.SetGlobalCameraPosition(Vector3.zero, Quaternion.identity);
+            Melon<Main>.Instance.LoggerInstance.Msg("Assert that the camera is at 0,0,0");
+            Melon<Main>.Instance.LoggerInstance.Msg("To go to the next step switch to any other pov");
+            POVUpdate();
+            while (pov == POVs.Handheld)
+            {
+                POVUpdate();
+                yield return null;
+            }
+            yield return new WaitForSeconds(0.75f);
+            handheld.SetPOV();
+            handheld.SetRelativeCameraPosition(Vector3.zero, Vector3.zero);
+            handheld.IsFlipped = true;
+            Melon<Main>.Instance.LoggerInstance.Msg("Assert that the camera is flipped");
+            Melon<Main>.Instance.LoggerInstance.Msg("This concludes the handheld tests");
+            Melon<Main>.Instance.LoggerInstance.Msg("To go to the next step switch to any other pov");
+            POVUpdate();
+            while (pov == POVs.Handheld)
+            {
+                POVUpdate();
+                yield return null;
+            }
+            yield return new WaitForSeconds(1.5f);
+            thirdPerson.SetPOV();
+            Melon<Main>.Instance.LoggerInstance.Msg("Assert that the camera is in third person and isn't moving and very slowly turns");
+            thirdPerson.Distance = 5;
+            thirdPerson.Angle = 50;
+            thirdPerson.DistanceMultipier = 5;
+            Melon<Main>.Instance.LoggerInstance.Msg("Assert that the camera is kinda far, at a steep angle and changing the distance setting greately affects the camera distance");
+            Melon<Main>.Instance.LoggerInstance.Msg("To go to the next step switch to any other pov");
+            POVUpdate();
+            while (pov == POVs.ThirdPerson)
+            {
+                POVUpdate();
+                yield return null;
+            }
+            yield return new WaitForSeconds(0.75f);
+            thirdPerson.SetPOV();
+            thirdPerson.IsFlipped = true;
+            Melon<Main>.Instance.LoggerInstance.Msg("Assert that the camera is flipped");
+            Melon<Main>.Instance.LoggerInstance.Msg("This concludes the third person tests");
+            yield break;
+        }
+
+       public void GeneralTest()
+        {
+            MelonCoroutines.Start(innertester());
+        }
+
+        /// <summary>
+        /// Basically just redefines every variable
+        /// </summary>
         public bool Fix()
         {
             try
@@ -159,6 +339,7 @@ namespace Rock_Cam_Essentials
         /// <summary>
         ///Sets the settings settings, aka the bounds for the FOV setting ingame, for the third person camera
         /// </summary>
+        [Obsolete("Just set the variable directly")]
         public bool SetFOVSettingsSettings(int maxFOV, int minFOV, int step)
         {
             try
@@ -178,6 +359,7 @@ namespace Rock_Cam_Essentials
         /// DO NOT USE, JUST SET THE VARIABLE DIRECTLY
         ///Sets the FOV of the third person camera, written in a way where it will also update the ingame values shown
         /// </summary>
+        [Obsolete("Just set the variable directly")]
         public bool SetFOV(int fov)
         {
             try
@@ -246,8 +428,10 @@ namespace Rock_Cam_Essentials
             return true;
         }
         /// <summary>
+        /// JUST SET THE VARIABLE DIRECTLY
         ///Starts the recording, won't do anything if already recording
         /// </summary> 
+        [Obsolete("Just set the variable direclty")]
         public bool StartRecording()
         {
             if (!IsRecording)
@@ -270,8 +454,10 @@ namespace Rock_Cam_Essentials
             return true;
         }
         /// <summary>
+        /// JUST SET THE VARIALBE DIRECTLY
         ///Ends the recording, won't do anything if already not recording
         /// </summary>
+        [Obsolete("Just set the variable direclty")]
         public bool EndRecording()
         {
             if (IsRecording)
@@ -305,8 +491,10 @@ namespace Rock_Cam_Essentials
             }
         }
         /// <summary>
+        /// JUST SET THE VARIABLE DIRECTLY(IsRecording)
         ///Sets the recording status to the value
         /// </summary>
+        [Obsolete("Just set the variable directly")]
         public bool SetRecordingStatus(bool value)
         {
             try
@@ -330,14 +518,20 @@ namespace Rock_Cam_Essentials
         /// </summary>
         public bool SetGlobalRotationalSmoothing(float smooth)
         {
-            return thirdPerson.SetRotationalSmooting(smooth) && firstPerson.SetRotationalSmooting(smooth) && handheld.SetRotationalSmooting(smooth);
+            thirdPerson.RotationalSmoothing = smooth;
+            firstPerson.RotationalSmoothing = smooth;
+            handheld.RotationalSmoothing = smooth;
+            return true;
         }
         /// <summary>
         ///Sets the positional smoothing for all cameras
         /// </summary>
         public bool SetGlobalPositionalSmoothing(float smooth)
         {
-            return thirdPerson.SetPositionalSmooting(smooth) && firstPerson.SetPositionalSmooting(smooth) && handheld.SetPositionalSmooting(smooth);
+            thirdPerson.PositionalSmoothing = smooth;
+            firstPerson.PositionalSmoothing = smooth;
+            handheld.PositionalSmoothing = smooth;
+            return true;
         }
         /// <summary>
         ///Makes the camera instantly reach its destination ignoring smoothing, no idea why i wrote the same function twice lmao
@@ -403,6 +597,10 @@ namespace Rock_Cam_Essentials
             }
             return true;
         }
+        /// <summary>
+        /// JUST SET THE VARIABLE DIRECTLY
+        /// </summary>
+        [Obsolete("Just set the variable directly")]
         public bool SetPhotoTimerValue(int time)
         {
             try
@@ -533,7 +731,7 @@ namespace Rock_Cam_Essentials
         {
             try
             {
-                SetFOV(fov);
+                FOV = fov;
                 if (pov == "Null")
                 {
                     pov = this.pov;
@@ -549,18 +747,18 @@ namespace Rock_Cam_Essentials
                     {
                         TPCameraDistance = thirdPerson.Distance;
                     }
-                    thirdPerson.SetDistance(TPCameraDistance);
+                    thirdPerson.Distance = TPCameraDistance;
                     if (TPCameraAngle != -1)
                     {
-                        thirdPerson.SetAngle(TPCameraAngle);
+                        thirdPerson.Angle = TPCameraAngle;
                     }
                     if (positional_smoothing != -1)
                     {
-                        thirdPerson.SetPositionalSmooting(positional_smoothing);
+                        thirdPerson.PositionalSmoothing = positional_smoothing;
                     }
                     if (rotational_smoothing != -1)
                     {
-                        thirdPerson.SetRotationalSmooting(rotational_smoothing);
+                        thirdPerson.RotationalSmoothing = rotational_smoothing;
                     }
                 }
                 else if (pov == "FP")
@@ -568,11 +766,11 @@ namespace Rock_Cam_Essentials
                     firstPerson.SetPOV();
                     if (positional_smoothing != -1)
                     {
-                        firstPerson.SetPositionalSmooting(positional_smoothing);
+                        firstPerson.PositionalSmoothing = positional_smoothing;
                     }
                     if (rotational_smoothing != -1)
                     {
-                        firstPerson.SetRotationalSmooting(rotational_smoothing);
+                        firstPerson.RotationalSmoothing = rotational_smoothing;
                     }
                 }
                 else if (pov == "HH")
@@ -580,11 +778,11 @@ namespace Rock_Cam_Essentials
                     handheld.SetPOV();
                     if (positional_smoothing != -1)
                     {
-                        handheld.SetPositionalSmooting(positional_smoothing);
+                        handheld.PositionalSmoothing = positional_smoothing;
                     }
                     if (rotational_smoothing != -1)
                     {
-                        handheld.SetRotationalSmooting(rotational_smoothing);
+                        handheld.RotationalSmoothing = rotational_smoothing;
                     }
                 }
                 else
