@@ -64,74 +64,16 @@ namespace Rock_Cam_Essentials
     //The functions of the main class the actions you can do with the rockcam, while subclasses are mainly used for settings
     public class Rock_Cam
     {
-        public ThirdPerson thirdPerson;
-        public FirstPerson firstPerson;
-        public Handheld handheld;
-        public HandleBars handleBars;
-        public Il2CppRUMBLE.Recording.LCK.Extensions.LckDoubleButton _FOVSetter;
-        public int FOV { get => (int)_CameraController.GetCurrentModeFOV(); set => SetFOV(value); }
-        public int PhotoTimer { get => _Tablet.photoTimerCurrentValue; set => SetPhotoTimerValue(value); }
-        public int PhotoTimerIncrement { get => _Tablet.photoTimerIncrementValue; set => _Tablet.photoTimerIncrementValue = value; }
-        public int PhotoTimerMaxValue { get => _Tablet.photoTimerMaxValue; set => _Tablet.photoTimerMaxValue = value; }
-        public bool IsRecording { get => _GetRecordingStatus(); set => SetRecordingStatus(value); }
-        public int DetachedPreview { get => _DetachedPreviewManager.ActivePreviewNo; set => _Tablet.lckDetachedPreview.SwitchPreview(value);  }
-        public bool detachedPreviewChanged = false; 
-        public int MaxDespawnDistance { get => _Camera.maxDespawnDistance; set => _Camera.maxDespawnDistance = value; }
-        public float SpawnYOffset { get => _Camera.spawnYOffset; set => _Camera.spawnYOffset = value; }
-        public float TabletSpawnDelay { get => _Camera.tabletSpawnDelay; set => _Camera.tabletSpawnDelay = value; }
-        public float MaximumRenderDistance { get => _Tablet.maximumRenderDistance; set => _Tablet.maximumRenderDistance = value; }
-        public int MaxFOV { get => _FOVSetter._maxValue; set => _FOVSetter._maxValue = value; }
-        public int MinFOV { get => _FOVSetter._minValue; set => _FOVSetter._minValue = value; }
-        public int FOVStep { get => _FOVSetter._increment; set => _FOVSetter._increment = value; }
-        public int _oldDetachedPreview = 0;
-        public PlayerLIV _Camera;
-        public LCKTabletUtility _Tablet;
-        public Il2CppRUMBLE.Recording.LCK.Extensions.LCKCameraController _CameraController;
-        public Il2CppRUMBLE.Recording.LCK.Extensions.LCKSettingsButtonsController _POVController;
-        public Il2CppInterop.Runtime.InteropTypes.Arrays.Il2CppReferenceArray<Transform> DetachedMonitors;
-        public Transform RockCamTransform;
-        public ILckService _LckService;
-        public int isShown = 1;
-        public string pov = "HH";
-        public bool povChanged = false;
-        public LCKTabletDetachedPreview _DetachedPreviewManager;
-        public Il2CppTMPro.TMP_Text Nameplate;
-        public LckQualitySelector _QualitySelector;
-        public struct POVNames
-        {
-            public string ThirdPerson, FirstPerson, Handheld;
-        }
-        public POVNames POVs;
-        public struct RecordingSettings
-        {
-            public uint width, height, audioBitrate, Bitrate, framerate;
-            public static bool operator ==(RecordingSettings a, RecordingSettings b)
-            {
-                return a.width == b.width && a.height == b.height && a.audioBitrate == b.audioBitrate && a.Bitrate == b.Bitrate && a.framerate == b.framerate;
-            }
-            public static bool operator !=(RecordingSettings a, RecordingSettings b)
-            {
-                return !(a == b);
-            }
-        }
-        public Rock_Cam()
-        {
-            POVs.ThirdPerson = "TP";
-            POVs.FirstPerson = "FP";
-            POVs.Handheld = "HH";
-            Fix();
-        }
-
         private IEnumerator innertester()
         {
             TabletSpawnDelay = 5;
             Melon<Main>.Instance.LoggerInstance.Msg("Commensing part one of the general RCE test, firstly check that the tablet takes 5 seconds to appear after getting despawned");
-            while(isShown%2 == 1)
+            while (isShown % 2 == 1)
             {
                 IsShownUpdate();
                 yield return null;
             }
-            while(isShown%2 == 0)
+            while (isShown % 2 == 0)
             {
                 IsShownUpdate();
                 yield return null;
@@ -148,20 +90,20 @@ namespace Rock_Cam_Essentials
             PhotoTimer = 15;
             Melon<Main>.Instance.LoggerInstance.Msg("Check that detached preview is at the latest one, press the detached preview button to go to the next step");
             DetachedPreview = 5;
-            while(detachedPreviewChanged == false)
+            while (detachedPreviewChanged == false)
             {
                 UpdateDetachedPreview();
                 yield return null;
             }
             TakePhoto();
             Melon<Main>.Instance.LoggerInstance.Msg("Assert that the photo has been taken, start a recording to go to the next step");
-            while(IsRecording == false) { yield return null; }
+            while (IsRecording == false) { yield return null; }
             yield return new WaitForSeconds(2f);
             IsRecording = false;
             Melon<Main>.Instance.LoggerInstance.Msg("Assert that the recording has ended after 2 seconds");
             MaxDespawnDistance = 10000;
             Melon<Main>.Instance.LoggerInstance.Msg("Assert that the tablet takes despawns instead of teleporting to you if you are far away");
-            while (isShown%2 == 1)
+            while (isShown % 2 == 1)
             {
                 IsShownUpdate();
                 yield return null;
@@ -176,7 +118,7 @@ namespace Rock_Cam_Essentials
             ShowTablet();
             yield return new WaitForSeconds(2);
             HideTablet();
-            yield return new WaitForSeconds(2); 
+            yield return new WaitForSeconds(2);
             ShowTablet();
             Melon<Main>.Instance.LoggerInstance.Msg("Assert that the tablet was shown, then hidden, then shown again in 2 second intervals");
             yield return new WaitForSeconds(2);
@@ -185,12 +127,12 @@ namespace Rock_Cam_Essentials
             handheld.SetPOV();
             Melon<Main>.Instance.LoggerInstance.Msg("Assert that the camera is in handheld," +
                 " while not following your hand movements and turning very slowly, the next step will begin when you switch the pov");
-            while(pov == "HH")
+            while (pov == "HH")
             {
                 POVUpdate();
                 yield return null;
             }
-            if(povChanged == false)
+            if (povChanged == false)
             {
                 Melon<Main>.Instance.LoggerInstance.Warning("povChanged is false, should be true");
             }
@@ -200,7 +142,7 @@ namespace Rock_Cam_Essentials
             MaximumRenderDistance = 0;
             Melon<Main>.Instance.LoggerInstance.Msg("Assert that the image on rockcam has stopped updating, switch to first person to go to first person testing");
             POVUpdate();
-            while(pov != POVs.FirstPerson)
+            while (pov != POVs.FirstPerson)
             {
                 POVUpdate();
                 yield return null;
@@ -209,7 +151,7 @@ namespace Rock_Cam_Essentials
             Melon<Main>.Instance.LoggerInstance.Msg("Assert that the camera doesn't move and rotates slowly");
             Melon<Main>.Instance.LoggerInstance.Msg("To go to the next step switch to any other pov");
             POVUpdate();
-            while(pov == POVs.FirstPerson)
+            while (pov == POVs.FirstPerson)
             {
                 POVUpdate();
                 yield return null;
@@ -220,9 +162,9 @@ namespace Rock_Cam_Essentials
             Melon<Main>.Instance.LoggerInstance.Msg("This concludes first person testing");
             Melon<Main>.Instance.LoggerInstance.Msg("Switch to handheld pov to go to the next step");
             POVUpdate();
-            while(pov != POVs.Handheld)
+            while (pov != POVs.Handheld)
             {
-                POVUpdate(); 
+                POVUpdate();
                 yield return null;
             }
             Melon<Main>.Instance.LoggerInstance.Msg("Assert that the camera doesn't move and rotates slowly");
@@ -291,6 +233,68 @@ namespace Rock_Cam_Essentials
             Melon<Main>.Instance.LoggerInstance.Msg("Assert that the camera is flipped");
             Melon<Main>.Instance.LoggerInstance.Msg("This concludes the third person tests");
             yield break;
+        }
+
+
+
+
+
+        public ThirdPerson thirdPerson;
+        public FirstPerson firstPerson;
+        public Handheld handheld;
+        public HandleBars handleBars;
+        public Il2CppRUMBLE.Recording.LCK.Extensions.LckDoubleButton _FOVSetter;
+        public int FOV { get => (int)_CameraController.GetCurrentModeFOV(); set => SetFOV(value); }
+        public int PhotoTimer { get => _Tablet.photoTimerCurrentValue; set => SetPhotoTimerValue(value); }
+        public int PhotoTimerIncrement { get => _Tablet.photoTimerIncrementValue; set => _Tablet.photoTimerIncrementValue = value; }
+        public int PhotoTimerMaxValue { get => _Tablet.photoTimerMaxValue; set => _Tablet.photoTimerMaxValue = value; }
+        public bool IsRecording { get => _GetRecordingStatus(); set => SetRecordingStatus(value); }
+        public int DetachedPreview { get => _DetachedPreviewManager.ActivePreviewNo; set => _Tablet.lckDetachedPreview.SwitchPreview(value);  }
+        public bool detachedPreviewChanged = false; 
+        public int MaxDespawnDistance { get => _Camera.maxDespawnDistance; set => _Camera.maxDespawnDistance = value; }
+        public float SpawnYOffset { get => _Camera.spawnYOffset; set => _Camera.spawnYOffset = value; }
+        public float TabletSpawnDelay { get => _Camera.tabletSpawnDelay; set => _Camera.tabletSpawnDelay = value; }
+        public float MaximumRenderDistance { get => _Tablet.maximumRenderDistance; set => _Tablet.maximumRenderDistance = value; }
+        public int MaxFOV { get => _FOVSetter._maxValue; set => _FOVSetter._maxValue = value; }
+        public int MinFOV { get => _FOVSetter._minValue; set => _FOVSetter._minValue = value; }
+        public int FOVStep { get => _FOVSetter._increment; set => _FOVSetter._increment = value; }
+        public int _oldDetachedPreview = 0;
+        public PlayerLIV _Camera;
+        public LCKTabletUtility _Tablet;
+        public Il2CppRUMBLE.Recording.LCK.Extensions.LCKCameraController _CameraController;
+        public Il2CppRUMBLE.Recording.LCK.Extensions.LCKSettingsButtonsController _POVController;
+        public Il2CppInterop.Runtime.InteropTypes.Arrays.Il2CppReferenceArray<Transform> DetachedMonitors;
+        public Transform RockCamTransform;
+        public ILckService _LckService;
+        public int isShown = 1;
+        public string pov = "HH";
+        public bool povChanged = false;
+        public LCKTabletDetachedPreview _DetachedPreviewManager;
+        public Il2CppTMPro.TMP_Text Nameplate;
+        public LckQualitySelector _QualitySelector;
+        public struct POVNames
+        {
+            public string ThirdPerson, FirstPerson, Handheld;
+        }
+        public POVNames POVs;
+        public struct RecordingSettings
+        {
+            public uint width, height, audioBitrate, Bitrate, framerate;
+            public static bool operator ==(RecordingSettings a, RecordingSettings b)
+            {
+                return a.width == b.width && a.height == b.height && a.audioBitrate == b.audioBitrate && a.Bitrate == b.Bitrate && a.framerate == b.framerate;
+            }
+            public static bool operator !=(RecordingSettings a, RecordingSettings b)
+            {
+                return !(a == b);
+            }
+        }
+        public Rock_Cam()
+        {
+            POVs.ThirdPerson = "TP";
+            POVs.FirstPerson = "FP";
+            POVs.Handheld = "HH";
+            Fix();
         }
 
        public void GeneralTest()
