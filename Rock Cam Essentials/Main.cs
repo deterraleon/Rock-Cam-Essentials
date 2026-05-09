@@ -91,6 +91,7 @@ namespace Rock_Cam_Essentials
             Melon<Main>.Instance.LoggerInstance.Msg("Check that detached preview is at the latest one, press the detached preview button to go to the next step");
             DetachedPreview = 5;
             UpdateDetachedPreview();
+            UpdateDetachedPreview();
             while (detachedPreviewChanged == false)
             {
                 UpdateDetachedPreview();
