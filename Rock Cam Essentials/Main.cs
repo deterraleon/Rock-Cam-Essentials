@@ -90,6 +90,7 @@ namespace Rock_Cam_Essentials
             PhotoTimer = 15;
             Melon<Main>.Instance.LoggerInstance.Msg("Check that detached preview is at the latest one, press the detached preview button to go to the next step");
             DetachedPreview = 5;
+            UpdateDetachedPreview();
             while (detachedPreviewChanged == false)
             {
                 UpdateDetachedPreview();
@@ -103,6 +104,7 @@ namespace Rock_Cam_Essentials
             Melon<Main>.Instance.LoggerInstance.Msg("Assert that the recording has ended after 2 seconds");
             MaxDespawnDistance = 10000;
             Melon<Main>.Instance.LoggerInstance.Msg("Assert that the tablet takes despawns instead of teleporting to you if you are far away");
+            IsShownUpdate();
             while (isShown % 2 == 1)
             {
                 IsShownUpdate();
@@ -115,6 +117,8 @@ namespace Rock_Cam_Essentials
                 IsShownUpdate();
                 yield return null;
             }
+            SpawnYOffset = 0;
+            TabletSpawnDelay = 0;
             ShowTablet();
             yield return new WaitForSeconds(2);
             HideTablet();
@@ -147,6 +151,7 @@ namespace Rock_Cam_Essentials
                 POVUpdate();
                 yield return null;
             }
+            MaximumRenderDistance = 10;
             Melon<Main>.Instance.LoggerInstance.Msg("This concludes the general RCE test.");
             Melon<Main>.Instance.LoggerInstance.Msg("Assert that the camera doesn't move and rotates slowly");
             Melon<Main>.Instance.LoggerInstance.Msg("To go to the next step switch to any other pov");
@@ -507,8 +512,7 @@ namespace Rock_Cam_Essentials
                 {
                     return true;
                 }
-                if (value) EndRecording();
-                else StartRecording();
+                _Tablet.ToggleRecordingAndUpdateRecordStatus();
                 return true;
             }
             catch (Exception e)
